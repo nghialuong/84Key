@@ -98,6 +98,14 @@ int gJfront = 0;
 CFMachPortRef gEventTap = NULL;
 CFRunLoopSourceRef gRunLoopSource = NULL;
 
+// Spotlight fix: apps whose async text field loses an injected backspace, so we
+// replace text atomically via the Accessibility API instead of backspace+insert.
+// (Ported from OpenKey.mm, ModernKey: _axReplaceApp / _axSystemWide.)
+NSArray* gAxReplaceApp = @[@"com.apple.Spotlight"];
+AXUIElementRef gAxSystemWide = NULL;
+bool gAxFocusIsTarget = false;     // cached: is the focused element owned by an gAxReplaceApp?
+double gAxFocusCheckedAt = 0;      // cache timestamp (seconds)
+
 #define FRONT_APP ([[NSWorkspace sharedWorkspace] frontmostApplication].bundleIdentifier)
 
 BOOL containUnicodeCompoundApp(NSString* topApp) {
@@ -419,6 +427,138 @@ CGKeyCode ConvertEventToKeyboardLayoutCompatKeyCode(CGEventRef keyEvent, CGKeyCo
     return fallbackKeyCode;
 }
 
+// ---------------------------------------------------------------------------
+// Spotlight Accessibility (AX) atomic-replace path.
+//
+// Ported from OpenKey.mm (tuyenvm/OpenKey, GPLv3), ModernKey:
+//   isAXReplaceTargetFocused(), buildAXReplacementString(), asciiFold(),
+//   replaceFocusedTextViaAX(). Spotlight's async text field drops an injected
+//   backspace when typing fast (producing e.g. "chuúng" instead of "chúng"), so
+//   for a clean N->N character replacement we rewrite the text before the caret
+//   atomically through the Accessibility API. Any failure falls through to the
+//   normal CGEvent backspace+insert path, so other apps are unaffected.
+// ---------------------------------------------------------------------------
+
+// Is the system-wide focused element owned by one of gAxReplaceApp (e.g.
+// Spotlight)? Cached for a short TTL so we don't do Accessibility IPC on every
+// keystroke.
+bool isAXReplaceTargetFocused() {
+    double now = CFAbsoluteTimeGetCurrent();
+    if (now - gAxFocusCheckedAt < 0.15)
+        return gAxFocusIsTarget;
+    gAxFocusCheckedAt = now;
+    gAxFocusIsTarget = false;
+
+    if (gAxSystemWide == NULL) {
+        gAxSystemWide = AXUIElementCreateSystemWide();
+        AXUIElementSetMessagingTimeout(gAxSystemWide, 0.05f);
+    }
+    AXUIElementRef focused = NULL;
+    if (AXUIElementCopyAttributeValue(gAxSystemWide, kAXFocusedUIElementAttribute, (CFTypeRef*)&focused) == kAXErrorSuccess && focused) {
+        pid_t pid = 0;
+        if (AXUIElementGetPid(focused, &pid) == kAXErrorSuccess && pid > 0) {
+            NSRunningApplication* app = [NSRunningApplication runningApplicationWithProcessIdentifier:pid];
+            if (app.bundleIdentifier && [gAxReplaceApp containsObject:app.bundleIdentifier])
+                gAxFocusIsTarget = true;
+        }
+        CFRelease(focused);
+    }
+    return gAxFocusIsTarget;
+}
+
+// Build the replacement string (Unicode only) from the engine's charData, which
+// is stored right-to-left; mirrors the decode in SendNewCharString.
+NSString* buildAXReplacementString() {
+    NSMutableString* s = [NSMutableString stringWithCapacity:pData->newCharCount];
+    for (int k = pData->newCharCount - 1; k >= 0; k--) {
+        Uint32 t = pData->charData[k];
+        UniChar ch;
+        if ((t & PURE_CHARACTER_MASK) || (t & CHAR_CODE_MASK))
+            ch = (UniChar)(t & CHAR_MASK);
+        else
+            ch = keyCodeToCharacter(t);
+        [s appendString:[NSString stringWithCharacters:&ch length:1]];
+    }
+    return s;
+}
+
+// Fold a string to its lowercase ASCII base letters (strip Vietnamese
+// diacritics). Used to detect a stale Accessibility read: for an N->N mark
+// replacement, the text before the caret must have the same base letters as the
+// replacement.
+NSString* asciiFold(NSString* s) {
+    NSString* d = [[s lowercaseString] decomposedStringWithCanonicalMapping];
+    NSMutableString* out = [NSMutableString stringWithCapacity:d.length];
+    for (NSUInteger i = 0; i < d.length; i++) {
+        unichar c = [d characterAtIndex:i];
+        if (c >= 'a' && c <= 'z') [out appendFormat:@"%C", c];
+        else if (c == 0x0111) [out appendString:@"d"]; // đ
+    }
+    return out;
+}
+
+// Replace the `backspaceCount` characters before the caret with `newText`
+// directly through the Accessibility API (atomic; avoids the backspace/insert
+// race in apps like Spotlight). When typing fast the field may not yet contain
+// the characters the OS is still inserting, so we re-read briefly until the base
+// letters before the caret match `newText` before replacing. Returns false on
+// any failure (caller falls back to the CGEvent path).
+bool replaceFocusedTextViaAX(int backspaceCount, NSString* newText) {
+    if (backspaceCount <= 0 || newText == nil)
+        return false;
+    if (gAxSystemWide == NULL) {
+        gAxSystemWide = AXUIElementCreateSystemWide();
+        AXUIElementSetMessagingTimeout(gAxSystemWide, 0.05f);
+    }
+    AXUIElementRef focused = NULL;
+    if (AXUIElementCopyAttributeValue(gAxSystemWide, kAXFocusedUIElementAttribute, (CFTypeRef*)&focused) != kAXErrorSuccess || !focused)
+        return false;
+    AXUIElementSetMessagingTimeout(focused, 0.05f);
+
+    NSString* wantBase = asciiFold(newText);
+    bool ok = false;
+    int attempts = 0;
+    for (attempts = 0; attempts < 20 && !ok; attempts++) {
+        if (attempts > 0)
+            usleep(300); // 0.3ms: let the OS finish inserting the pending letters
+
+        CFTypeRef valueRef = NULL, rangeRef = NULL;
+        bool readOK = (AXUIElementCopyAttributeValue(focused, kAXValueAttribute, &valueRef) == kAXErrorSuccess &&
+                       valueRef && CFGetTypeID(valueRef) == CFStringGetTypeID() &&
+                       AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute, &rangeRef) == kAXErrorSuccess &&
+                       rangeRef && CFGetTypeID(rangeRef) == AXValueGetTypeID());
+        if (readOK) {
+            CFRange sel = {0, 0};
+            NSString* cur = (__bridge NSString*)valueRef;
+            if (AXValueGetValue((AXValueRef)rangeRef, kAXValueTypeCFRange, &sel) &&
+                sel.location >= backspaceCount && sel.location <= (CFIndex)cur.length) {
+
+                CFIndex delStart = sel.location - backspaceCount;
+                NSString* before = [cur substringWithRange:NSMakeRange(delStart, backspaceCount)];
+                if ([asciiFold(before) isEqualToString:wantBase]) {
+                    NSString* updated = [cur stringByReplacingCharactersInRange:NSMakeRange(delStart, backspaceCount)
+                                                                    withString:newText];
+                    if (AXUIElementSetAttributeValue(focused, kAXValueAttribute, (__bridge CFTypeRef)updated) == kAXErrorSuccess) {
+                        CFRange newSel = CFRangeMake(delStart + (CFIndex)newText.length, 0);
+                        AXValueRef newRange = AXValueCreate(kAXValueTypeCFRange, &newSel);
+                        if (newRange) {
+                            AXUIElementSetAttributeValue(focused, kAXSelectedTextRangeAttribute, newRange);
+                            CFRelease(newRange);
+                        }
+                        ok = true;
+                    } else {
+                        attempts = 20; // write failed; stop and fall back
+                    }
+                }
+            }
+        }
+        if (valueRef) CFRelease(valueRef);
+        if (rangeRef) CFRelease(rangeRef);
+    }
+    CFRelease(focused);
+    return ok;
+}
+
 /**
  * MAIN HOOK entry. Ported from OpenKeyCallback in OpenKey.mm.
  */
@@ -517,11 +657,20 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
             }
             return event;
         } else if (pData->code == vWillProcess || pData->code == vRestore || pData->code == vRestoreAndStartNewSession) {
-            // TODO(T14): Spotlight AX atomic-replace path. OpenKey replaces the
-            // text before the caret atomically through the Accessibility API for
-            // apps like Spotlight (whose async fields drop injected backspaces).
-            // That path is implemented in T14; for now we always fall through to
-            // the normal CGEvent backspace+insert path below.
+            // Spotlight (and similar async text fields) drop an injected
+            // backspace, so for a clean N->N character replacement, do it
+            // atomically via the Accessibility API. The gate scopes this to
+            // vWillProcess in Spotlight only; any failure falls through to the
+            // normal CGEvent backspace+insert path below, leaving other apps
+            // unaffected. Ported from OpenKey.mm (tuyenvm/OpenKey, GPLv3).
+            if (vFixSpotlight && vCodeTable == 0 && pData->code == vWillProcess &&
+                pData->extCode != 4 && pData->backspaceCount > 0 &&
+                pData->backspaceCount == pData->newCharCount && pData->backspaceCount < MAX_BUFF &&
+                isAXReplaceTargetFocused()) {
+                if (replaceFocusedTextViaAX(pData->backspaceCount, buildAXReplacementString())) {
+                    return NULL;
+                }
+            }
 
             // fix autocomplete
             if (vFixRecommendBrowser && pData->extCode != 4) {
