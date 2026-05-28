@@ -15,3 +15,28 @@ jobs:
         run: c++ --version
       - name: Build and run the engine + English-detection harness
         run: bash core/tests/run_tests.sh
+
+  macos-app:
+    name: Build macOS app
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show Xcode version
+        run: xcodebuild -version
+      # The Xcode project is generated from platform/macos/project.yml via
+      # XcodeGen and committed; regenerate so the project always matches the
+      # spec, then build without code signing.
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        working-directory: platform/macos
+        run: xcodegen generate
+      - name: Build app (no code signing)
+        working-directory: platform/macos
+        run: |
+          xcodebuild \
+            -project 84Key.xcodeproj \
+            -scheme 84Key \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            build
