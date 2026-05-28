@@ -54,18 +54,35 @@ fix. 84Key intentionally avoids acting in secure-input/password fields.
 
 ## Building
 
-Requirements: **macOS** with **Xcode** installed.
+Requirements: **macOS** with **Xcode** installed, and **[XcodeGen](https://github.com/yonsm/XcodeGen)**
+(`brew install xcodegen`) to generate the Xcode project.
 
-- **C++ engine tests:**
+- **C++ engine tests** (platform-independent, also run in CI):
 
   ```sh
   bash core/tests/run_tests.sh
   ```
 
-- **macOS app:** build with Xcode, or from the command line with `xcodebuild`.
+- **macOS app:**
+
+  ```sh
+  cd platform/macos
+  xcodegen generate            # regenerate 84Key.xcodeproj from project.yml
+  xcodebuild -scheme 84Key -configuration Debug CODE_SIGNING_ALLOWED=NO build
+  ```
+
+- **Regenerate the dictionaries** (English from google-10000-english, Vietnamese
+  from rules):
+
+  ```sh
+  python3 tools/gen_dict.py
+  ```
+
+See [`docs/BUILD.md`](docs/BUILD.md) for details and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+for how the engine and app fit together.
 
 Notarized distribution requires an Apple Developer account (planned for a
-future release).
+future release); local development builds do not.
 
 ## Credits
 
