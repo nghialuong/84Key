@@ -1,0 +1,17 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  engine-tests:
+    name: Core engine tests (C++)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compiler version
+        run: c++ --version
+      - name: Build and run the engine + English-detection harness
+        run: bash core/tests/run_tests.sh
