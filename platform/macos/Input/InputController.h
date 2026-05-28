@@ -23,8 +23,14 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)isRunning;
 
 /// Wraps AXIsProcessTrusted(): YES if this process is allowed to observe and
-/// post keyboard events. Onboarding to grant this is a later task.
+/// post keyboard events.
 - (BOOL)hasAccessibilityPermission;
+
+/// Like hasAccessibilityPermission, but asks macOS to surface its "open System
+/// Settings" prompt when permission is missing (via
+/// AXIsProcessTrustedWithOptions + kAXTrustedCheckOptionPrompt). Returns the
+/// current trust state. Used by first-run onboarding.
+- (BOOL)requestAccessibilityPermission;
 
 /// Push option values into the engine + macOS-local option globals. Keys are the
 /// option global names (e.g. @"vInputType", @"vAutoDetectEnglish",

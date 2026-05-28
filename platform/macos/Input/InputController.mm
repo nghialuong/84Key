@@ -602,6 +602,11 @@ void ensureEngineInitialized() {
     return AXIsProcessTrusted() ? YES : NO;
 }
 
+- (BOOL)requestAccessibilityPermission {
+    NSDictionary *options = @{ (__bridge NSString *)kAXTrustedCheckOptionPrompt: @YES };
+    return AXIsProcessTrustedWithOptions((__bridge CFDictionaryRef)options) ? YES : NO;
+}
+
 - (BOOL)isRunning {
     return (gEventTap != NULL && CGEventTapIsEnabled(gEventTap)) ? YES : NO;
 }

@@ -28,6 +28,8 @@ targets:
       # CoreGraphics/AppKit/ApplicationServices symbols resolve via the SDK
       # umbrella through Cocoa.
       - sdk: Carbon.framework
+      # ServiceManagement provides SMAppService for the run-at-login feature.
+      - sdk: ServiceManagement.framework
     settings:
       base:
         PRODUCT_NAME: "84Key"

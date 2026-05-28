@@ -7,24 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		080C562B755701C4BCE7AE63 /* ServiceManagement.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085237D712AEEA06432198A6 /* ServiceManagement.framework */; };
 		24482B6F1C2BDD94A2A8B5BB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0467AC75FAAB4925903F244A /* AppDelegate.swift */; };
 		38584869C1388E5ECB009D3D /* InputController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 76D6397CA6F9E5BE642D9381 /* InputController.mm */; };
 		394BD58B1FA7E0B74E09D94D /* EnglishDetect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 346834B1FB4582BDFFD78C95 /* EnglishDetect.cpp */; };
 		543DBE4F6172DDE24CCC7B71 /* ConvertTool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 347D482A1778708F877ABB7D /* ConvertTool.cpp */; };
 		5ABED8A7FDA6CF03D831D186 /* EngineGlobals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2EC8E0C2A29EBDA375D5EFBE /* EngineGlobals.cpp */; };
 		5EFBB549AC873A5B611E7DFC /* Engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C921456CE8030DD3617E34E8 /* Engine.cpp */; };
+		6201415A13C08077BFBFDC20 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B32E1258BBD63E72651EF8 /* OnboardingView.swift */; };
 		873536A347CFC1B8E7DE7193 /* Vietnamese.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2FBCA6AEC25013EB22A612B3 /* Vietnamese.cpp */; };
 		B903FD9C507C300801DE2309 /* SmartSwitchKey.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C510AB2E4A5D306BA3754A41 /* SmartSwitchKey.cpp */; };
 		B9F18A052F8A7E9F4DDE36D0 /* Macro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6788FBF962253F950767FB81 /* Macro.cpp */; };
 		D66185F4A495856DAE3BFAF9 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 688A4D1C0679B8688F705E31 /* Carbon.framework */; };
 		D9ED14F5CAF2F8D4ACD4F64D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */; };
 		E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979D9679B703249C62E9D1E /* SettingsView.swift */; };
+		EBF663A0A17D0B69682218C0 /* LoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */; };
 		FB9015AE1BB0AECCEFA40136 /* Key84App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF8323C28336218318DCF13 /* Key84App.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		0467AC75FAAB4925903F244A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		06EFA2EE9DF5939A3C0D97B8 /* Engine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Engine.h; sourceTree = "<group>"; };
+		085237D712AEEA06432198A6 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
 		136A13AA78B3DC493BC494CF /* 84Key.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 84Key.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1979D9679B703249C62E9D1E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2A375D674044ECA18C1D0D67 /* DataType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DataType.h; sourceTree = "<group>"; };
@@ -37,6 +41,7 @@
 		6788FBF962253F950767FB81 /* Macro.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Macro.cpp; sourceTree = "<group>"; };
 		688A4D1C0679B8688F705E31 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
 		6EF99FC2ABA0752A92217C70 /* InputController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InputController.h; sourceTree = "<group>"; };
+		72B32E1258BBD63E72651EF8 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		76D6397CA6F9E5BE642D9381 /* InputController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = InputController.mm; sourceTree = "<group>"; };
 		80D1CD70559CFEEAA46701D7 /* win32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = win32.h; sourceTree = "<group>"; };
 		9983066B472363CAAF6C02F1 /* mac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mac.h; sourceTree = "<group>"; };
@@ -45,6 +50,7 @@
 		C921456CE8030DD3617E34E8 /* Engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Engine.cpp; sourceTree = "<group>"; };
 		CB6AA51CA929AE10CEE1467C /* Macro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Macro.h; sourceTree = "<group>"; };
 		D352DAB433E490572F41465F /* ConvertTool.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ConvertTool.h; sourceTree = "<group>"; };
+		D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemManager.swift; sourceTree = "<group>"; };
 		DBF8323C28336218318DCF13 /* Key84App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Key84App.swift; sourceTree = "<group>"; };
 		E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		ED02531F19339DA19466E04B /* EnglishDetect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnglishDetect.h; sourceTree = "<group>"; };
@@ -57,6 +63,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D66185F4A495856DAE3BFAF9 /* Carbon.framework in Frameworks */,
+				080C562B755701C4BCE7AE63 /* ServiceManagement.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -67,6 +74,7 @@
 			isa = PBXGroup;
 			children = (
 				688A4D1C0679B8688F705E31 /* Carbon.framework */,
+				085237D712AEEA06432198A6 /* ServiceManagement.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -148,6 +156,8 @@
 				0467AC75FAAB4925903F244A /* AppDelegate.swift */,
 				E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */,
 				DBF8323C28336218318DCF13 /* Key84App.swift */,
+				D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */,
+				72B32E1258BBD63E72651EF8 /* OnboardingView.swift */,
 				1979D9679B703249C62E9D1E /* SettingsView.swift */,
 			);
 			path = App;
@@ -233,7 +243,9 @@
 				394BD58B1FA7E0B74E09D94D /* EnglishDetect.cpp in Sources */,
 				38584869C1388E5ECB009D3D /* InputController.mm in Sources */,
 				FB9015AE1BB0AECCEFA40136 /* Key84App.swift in Sources */,
+				EBF663A0A17D0B69682218C0 /* LoginItemManager.swift in Sources */,
 				B9F18A052F8A7E9F4DDE36D0 /* Macro.cpp in Sources */,
+				6201415A13C08077BFBFDC20 /* OnboardingView.swift in Sources */,
 				E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */,
 				B903FD9C507C300801DE2309 /* SmartSwitchKey.cpp in Sources */,
 				873536A347CFC1B8E7DE7193 /* Vietnamese.cpp in Sources */,
