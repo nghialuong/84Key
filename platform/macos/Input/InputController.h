@@ -26,6 +26,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// post keyboard events. Onboarding to grant this is a later task.
 - (BOOL)hasAccessibilityPermission;
 
+/// Push option values into the engine + macOS-local option globals. Keys are the
+/// option global names (e.g. @"vInputType", @"vAutoDetectEnglish",
+/// @"vFixSpotlight"); values are integers. Unknown keys are ignored.
+- (void)applyEngineOptions:(NSDictionary<NSString *, NSNumber *> *)options;
+
 @end
 
 NS_ASSUME_NONNULL_END

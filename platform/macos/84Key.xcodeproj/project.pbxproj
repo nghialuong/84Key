@@ -17,6 +17,7 @@
 		B903FD9C507C300801DE2309 /* SmartSwitchKey.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C510AB2E4A5D306BA3754A41 /* SmartSwitchKey.cpp */; };
 		B9F18A052F8A7E9F4DDE36D0 /* Macro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6788FBF962253F950767FB81 /* Macro.cpp */; };
 		D66185F4A495856DAE3BFAF9 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 688A4D1C0679B8688F705E31 /* Carbon.framework */; };
+		D9ED14F5CAF2F8D4ACD4F64D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */; };
 		E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979D9679B703249C62E9D1E /* SettingsView.swift */; };
 		FB9015AE1BB0AECCEFA40136 /* Key84App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF8323C28336218318DCF13 /* Key84App.swift */; };
 /* End PBXBuildFile section */
@@ -45,6 +46,7 @@
 		CB6AA51CA929AE10CEE1467C /* Macro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Macro.h; sourceTree = "<group>"; };
 		D352DAB433E490572F41465F /* ConvertTool.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ConvertTool.h; sourceTree = "<group>"; };
 		DBF8323C28336218318DCF13 /* Key84App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Key84App.swift; sourceTree = "<group>"; };
+		E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		ED02531F19339DA19466E04B /* EnglishDetect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnglishDetect.h; sourceTree = "<group>"; };
 		F324EA9E8D67A922D23BEB6C /* Vietnamese.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Vietnamese.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -144,6 +146,7 @@
 			isa = PBXGroup;
 			children = (
 				0467AC75FAAB4925903F244A /* AppDelegate.swift */,
+				E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */,
 				DBF8323C28336218318DCF13 /* Key84App.swift */,
 				1979D9679B703249C62E9D1E /* SettingsView.swift */,
 			);
@@ -223,6 +226,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				24482B6F1C2BDD94A2A8B5BB /* AppDelegate.swift in Sources */,
+				D9ED14F5CAF2F8D4ACD4F64D /* AppSettings.swift in Sources */,
 				543DBE4F6172DDE24CCC7B71 /* ConvertTool.cpp in Sources */,
 				5EFBB549AC873A5B611E7DFC /* Engine.cpp in Sources */,
 				5ABED8A7FDA6CF03D831D186 /* EngineGlobals.cpp in Sources */,

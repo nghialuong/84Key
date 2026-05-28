@@ -6,6 +6,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let input = InputController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Register defaults and push the saved options into the engine globals
+        // before the tap starts processing keys.
+        AppSettings.shared.attach(input)
         let started = input.start()
         // Returning false here is expected until Accessibility permission is
         // granted; the onboarding flow that requests it is a later task.

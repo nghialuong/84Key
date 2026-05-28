@@ -661,4 +661,20 @@ void ensureEngineInitialized() {
     }
 }
 
+- (void)applyEngineOptions:(NSDictionary<NSString *, NSNumber *> *)options {
+    for (NSString *key in options) {
+        int v = options[key].intValue;
+        #define SET_IF(name) if ([key isEqualToString:@#name]) { name = v; continue; }
+        SET_IF(vLanguage) SET_IF(vInputType) SET_IF(vFreeMark) SET_IF(vCodeTable)
+        SET_IF(vCheckSpelling) SET_IF(vUseModernOrthography) SET_IF(vQuickTelex)
+        SET_IF(vRestoreIfWrongSpelling) SET_IF(vFixRecommendBrowser) SET_IF(vUseMacro)
+        SET_IF(vUseMacroInEnglishMode) SET_IF(vUseSmartSwitchKey) SET_IF(vUpperCaseFirstChar)
+        SET_IF(vAllowConsonantZFWJ) SET_IF(vQuickStartConsonant) SET_IF(vQuickEndConsonant)
+        SET_IF(vAutoDetectEnglish) SET_IF(vOtherLanguage)
+        SET_IF(vFixSpotlight) SET_IF(vSendKeyStepByStep) SET_IF(vFixChromiumBrowser)
+        SET_IF(vPerformLayoutCompat)
+        #undef SET_IF
+    }
+}
+
 @end
