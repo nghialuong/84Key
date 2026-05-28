@@ -1,0 +1,32 @@
+# --- Claude Code instructions (NOT part of the public project) ---
+# These hold the build-pack/spec that drives development; never commit them.
+CLAUDE.md
+private_docs/
+PROGRESS.md
+
+# --- macOS ---
+.DS_Store
+
+# --- Xcode ---
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+*.moved-aside
+*.hmap
+*.ipa
+
+# --- Swift Package Manager ---
+.build/
+.swiftpm/
+Package.resolved
+
+# --- Distribution artifacts ---
+*.dmg
+*.zip
+*.app
+
+# --- Misc ---
+*.log
+.env
