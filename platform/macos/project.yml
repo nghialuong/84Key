@@ -22,6 +22,11 @@ targets:
       - path: Bridge
       - path: ../../core/engine
         name: Engine
+      # Bundled dictionaries for automatic English detection (Copy Bundle Resources).
+      - path: ../../core/data/english_words.dat
+        buildPhase: resources
+      - path: ../../core/data/viet_telex.dat
+        buildPhase: resources
     dependencies:
       # Carbon provides the Text Input Source (TIS) APIs used by the event tap
       # to honor the "turn off Vietnamese in other layouts" option. Other

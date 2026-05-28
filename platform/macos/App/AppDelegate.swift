@@ -19,6 +19,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let settings = AppSettings.shared
         settings.attach(input)
 
+        // Load the bundled dictionaries so automatic English detection works.
+        let dictsLoaded = input.loadDictionaries()
+        NSLog("84Key dictionaries loaded = %@", dictsLoaded ? "YES" : "NO")
+
         // Keep the macOS login item in sync with the persisted preference once
         // at launch, then on every change of the toggle.
         LoginItemManager.sync(enabled: settings.runOnStartup)

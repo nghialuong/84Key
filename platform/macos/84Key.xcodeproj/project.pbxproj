@@ -20,15 +20,19 @@
 		B9F18A052F8A7E9F4DDE36D0 /* Macro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6788FBF962253F950767FB81 /* Macro.cpp */; };
 		D66185F4A495856DAE3BFAF9 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 688A4D1C0679B8688F705E31 /* Carbon.framework */; };
 		D9ED14F5CAF2F8D4ACD4F64D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */; };
+		DDD1FF68B434D0D4A8042886 /* viet_telex.dat in Resources */ = {isa = PBXBuildFile; fileRef = 118A23563A5DB117B8112720 /* viet_telex.dat */; };
 		E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979D9679B703249C62E9D1E /* SettingsView.swift */; };
 		EBF663A0A17D0B69682218C0 /* LoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */; };
+		F5DCA2313A3A5606BECCAE7D /* english_words.dat in Resources */ = {isa = PBXBuildFile; fileRef = 030075AD889FD499BBAFF1D9 /* english_words.dat */; };
 		FB9015AE1BB0AECCEFA40136 /* Key84App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF8323C28336218318DCF13 /* Key84App.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		030075AD889FD499BBAFF1D9 /* english_words.dat */ = {isa = PBXFileReference; path = english_words.dat; sourceTree = "<group>"; };
 		0467AC75FAAB4925903F244A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		06EFA2EE9DF5939A3C0D97B8 /* Engine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Engine.h; sourceTree = "<group>"; };
 		085237D712AEEA06432198A6 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
+		118A23563A5DB117B8112720 /* viet_telex.dat */ = {isa = PBXFileReference; path = viet_telex.dat; sourceTree = "<group>"; };
 		136A13AA78B3DC493BC494CF /* 84Key.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 84Key.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1979D9679B703249C62E9D1E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		2A375D674044ECA18C1D0D67 /* DataType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DataType.h; sourceTree = "<group>"; };
@@ -116,6 +120,15 @@
 			path = Input;
 			sourceTree = "<group>";
 		};
+		AA48CC94514B38A8773FFC38 /* data */ = {
+			isa = PBXGroup;
+			children = (
+				030075AD889FD499BBAFF1D9 /* english_words.dat */,
+				118A23563A5DB117B8112720 /* viet_telex.dat */,
+			);
+			path = data;
+			sourceTree = "<group>";
+		};
 		BE85D71DFBAB931782076E22 = {
 			isa = PBXGroup;
 			children = (
@@ -174,6 +187,7 @@
 		F3F5FF64F8CBD2D533AB8502 /* core */ = {
 			isa = PBXGroup;
 			children = (
+				AA48CC94514B38A8773FFC38 /* data */,
 				D0820B51004B9E3D385BA3E2 /* Engine */,
 			);
 			path = core;
@@ -187,6 +201,7 @@
 			buildConfigurationList = 9305DBE0C913FDD6697AC94B /* Build configuration list for PBXNativeTarget "84Key" */;
 			buildPhases = (
 				13035D426603B97859CBB2C0 /* Sources */,
+				5256C0E898550BEC4A6525CC /* Resources */,
 				12822DE004D95467744E2678 /* Frameworks */,
 			);
 			buildRules = (
@@ -229,6 +244,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5256C0E898550BEC4A6525CC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F5DCA2313A3A5606BECCAE7D /* english_words.dat in Resources */,
+				DDD1FF68B434D0D4A8042886 /* viet_telex.dat in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		13035D426603B97859CBB2C0 /* Sources */ = {

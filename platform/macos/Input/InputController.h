@@ -37,6 +37,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// @"vFixSpotlight"); values are integers. Unknown keys are ignored.
 - (void)applyEngineOptions:(NSDictionary<NSString *, NSNumber *> *)options;
 
+/// Load the bundled English and Vietnamese-by-Telex dictionaries into the engine
+/// so automatic English detection works. Returns YES once the English dictionary
+/// is ready. Safe to call again to reload.
+- (BOOL)loadDictionaries;
+
 @end
 
 NS_ASSUME_NONNULL_END

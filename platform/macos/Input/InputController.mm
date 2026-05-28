@@ -682,4 +682,19 @@ void ensureEngineInitialized() {
     }
 }
 
+- (BOOL)loadDictionaries {
+    NSBundle *bundle = [NSBundle mainBundle];
+    NSString *engPath = [bundle pathForResource:@"english_words" ofType:@"dat"];
+    NSString *vietPath = [bundle pathForResource:@"viet_telex" ofType:@"dat"];
+    if (engPath == nil || vietPath == nil)
+        return NO;
+    NSData *eng = [NSData dataWithContentsOfFile:engPath];
+    NSData *viet = [NSData dataWithContentsOfFile:vietPath];
+    if (eng == nil || viet == nil)
+        return NO;
+    initEnglishDict((const Byte *)eng.bytes, (int)eng.length);
+    initVietByTelexDict((const Byte *)viet.bytes, (int)viet.length);
+    return isEnglishDictReady() ? YES : NO;
+}
+
 @end
