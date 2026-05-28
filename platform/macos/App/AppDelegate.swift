@@ -1,11 +1,20 @@
 import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    // The Obj-C++ input controller bridges to the C++ engine. The event tap is
-    // wired up in T8; for the skeleton we just confirm the bridge links and runs.
+    // The Obj-C++ input controller bridges to the C++ engine and owns the
+    // system-wide CGEvent tap that processes Vietnamese typing.
     private let input = InputController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSLog("84Key launched: %@", input.engineStatus())
+        let started = input.start()
+        // Returning false here is expected until Accessibility permission is
+        // granted; the onboarding flow that requests it is a later task.
+        NSLog("84Key launched: event tap started = %@ (accessibility = %@)",
+              started ? "YES" : "NO",
+              input.hasAccessibilityPermission() ? "YES" : "NO")
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        input.stop()
     }
 }

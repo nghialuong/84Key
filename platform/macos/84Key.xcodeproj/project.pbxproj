@@ -16,6 +16,7 @@
 		873536A347CFC1B8E7DE7193 /* Vietnamese.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2FBCA6AEC25013EB22A612B3 /* Vietnamese.cpp */; };
 		B903FD9C507C300801DE2309 /* SmartSwitchKey.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C510AB2E4A5D306BA3754A41 /* SmartSwitchKey.cpp */; };
 		B9F18A052F8A7E9F4DDE36D0 /* Macro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6788FBF962253F950767FB81 /* Macro.cpp */; };
+		D66185F4A495856DAE3BFAF9 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 688A4D1C0679B8688F705E31 /* Carbon.framework */; };
 		E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979D9679B703249C62E9D1E /* SettingsView.swift */; };
 		FB9015AE1BB0AECCEFA40136 /* Key84App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF8323C28336218318DCF13 /* Key84App.swift */; };
 /* End PBXBuildFile section */
@@ -33,6 +34,7 @@
 		5AE1443D7226873261EA17E9 /* SmartSwitchKey.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SmartSwitchKey.h; sourceTree = "<group>"; };
 		60D093CB51083705780984DA /* Key84-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Key84-Bridging-Header.h"; sourceTree = "<group>"; };
 		6788FBF962253F950767FB81 /* Macro.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Macro.cpp; sourceTree = "<group>"; };
+		688A4D1C0679B8688F705E31 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
 		6EF99FC2ABA0752A92217C70 /* InputController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InputController.h; sourceTree = "<group>"; };
 		76D6397CA6F9E5BE642D9381 /* InputController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = InputController.mm; sourceTree = "<group>"; };
 		80D1CD70559CFEEAA46701D7 /* win32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = win32.h; sourceTree = "<group>"; };
@@ -47,7 +49,26 @@
 		F324EA9E8D67A922D23BEB6C /* Vietnamese.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Vietnamese.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		12822DE004D95467744E2678 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D66185F4A495856DAE3BFAF9 /* Carbon.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
+		0F3ADD837E051574FCAA2CF6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				688A4D1C0679B8688F705E31 /* Carbon.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		1F4F089DA84C14E0392E14EE /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -92,6 +113,7 @@
 				F2D50724F3C658B04BD3CC66 /* Bridge */,
 				7AE60D4F20AE555959C7623E /* Input */,
 				323F531F686782C74ADB8527 /* v0.1-build */,
+				0F3ADD837E051574FCAA2CF6 /* Frameworks */,
 				1F4F089DA84C14E0392E14EE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -152,6 +174,7 @@
 			buildConfigurationList = 9305DBE0C913FDD6697AC94B /* Build configuration list for PBXNativeTarget "84Key" */;
 			buildPhases = (
 				13035D426603B97859CBB2C0 /* Sources */,
+				12822DE004D95467744E2678 /* Frameworks */,
 			);
 			buildRules = (
 			);

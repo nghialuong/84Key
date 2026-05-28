@@ -22,6 +22,12 @@ targets:
       - path: Bridge
       - path: ../../core/engine
         name: Engine
+    dependencies:
+      # Carbon provides the Text Input Source (TIS) APIs used by the event tap
+      # to honor the "turn off Vietnamese in other layouts" option. Other
+      # CoreGraphics/AppKit/ApplicationServices symbols resolve via the SDK
+      # umbrella through Cocoa.
+      - sdk: Carbon.framework
     settings:
       base:
         PRODUCT_NAME: "84Key"

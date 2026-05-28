@@ -32,3 +32,23 @@ int vOtherLanguage = 1;
 int vTempOffOpenKey = 0;
 // Flagship: automatic English detection defaults ON (see PROGRESS / SPEC).
 int vAutoDetectEnglish = 1;
+
+// ---------------------------------------------------------------------------
+// macOS-local options (NOT declared in core/engine/Engine.h). These mirror the
+// extra knobs OpenKey defines in its app layer and are referenced by the ported
+// input core in InputController.mm. They are owned by the host app; the settings
+// layer (T10) may update them at runtime.
+// ---------------------------------------------------------------------------
+
+// Send each character as its own CGEvent instead of one batched unicode string.
+int vSendKeyStepByStep = 0;
+// Fix Chromium-family browsers' address-bar autocomplete (shift+left instead of
+// an extra empty char). Off by default.
+int vFixChromiumBrowser = 0;
+// Map the pressed key through the active keyboard layout before handing it to
+// the engine (helps non-QWERTY layouts). Off by default.
+int vPerformLayoutCompat = 0;
+// Spotlight (and similar async fields) drop injected backspaces; the AX
+// atomic-replace path is implemented in T14. Defined here so the ported code
+// compiles; the AX behavior itself is intentionally not implemented yet.
+int vFixSpotlight = 1;
