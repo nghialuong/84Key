@@ -11,6 +11,7 @@
 #include "Engine.h"
 #include <iostream>
 #include <memory.h>
+#include <algorithm> // std::find — explicit for libstdc++ (not transitively included)
 
 //option
 bool convertToolDontAlertWhenCompleted = false;
