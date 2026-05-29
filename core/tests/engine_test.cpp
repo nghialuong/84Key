@@ -320,6 +320,103 @@ int main() {
         ok ? g_pass++ : g_fail++;
     }
 
+    // ---- Cases derived from the gonhanh.org Vietnamese typing docs -----------
+    // (validation-algorithm.md & vietnamese-language-system.md). These encode the
+    // documented Telex/VNI tables, orthography rules, and phonotactic constraints
+    // as gating assertions of 84Key's actual behavior.
+
+    printf("\n== H. Telex diacritics & tone marks (docs §7) ==\n");
+    resetOptions();
+    expectEq(st, "H1", "as", "á");
+    expectEq(st, "H2", "af", "à");
+    expectEq(st, "H3", "ar", "ả");
+    expectEq(st, "H4", "ax", "ã");
+    expectEq(st, "H5", "aj", "ạ");
+    expectEq(st, "H6", "aa", "â");
+    expectEq(st, "H7", "aas", "ấ");
+    expectEq(st, "H8", "aw", "ă");
+    expectEq(st, "H9", "aws", "ắ");
+    expectEq(st, "H10", "ow", "ơ");
+    expectEq(st, "H11", "owf", "ờ");
+    expectEq(st, "H12", "uw", "ư");
+    expectEq(st, "H13", "uwf", "ừ");
+    expectEq(st, "H14", "dd", "đ");
+    expectEq(st, "H15", "tuwf", "từ");
+    expectEq(st, "H16", "muwa", "mưa");
+
+    printf("\n== I. Telex undo by repeating the key (docs §7) ==\n");
+    resetOptions();
+    expectEq(st, "I1", "ass", "as");
+    expectEq(st, "I2", "aaa", "aa");
+    expectEq(st, "I3", "aww", "aw");
+    expectEq(st, "I4", "oww", "ow");
+
+    printf("\n== J. VNI diacritics & tone marks (docs §8) ==\n");
+    resetOptions();
+    vInputType = 1; // VNI
+    expectEq(st, "J1", "a1", "á");
+    expectEq(st, "J2", "a2", "à");
+    expectEq(st, "J3", "a3", "ả");
+    expectEq(st, "J4", "a4", "ã");
+    expectEq(st, "J5", "a5", "ạ");
+    expectEq(st, "J6", "a6", "â");
+    expectEq(st, "J7", "a61", "ấ");
+    expectEq(st, "J8", "a8", "ă");
+    expectEq(st, "J9", "a81", "ắ");
+    expectEq(st, "J10", "o7", "ơ");
+    expectEq(st, "J11", "o72", "ờ");
+    expectEq(st, "J12", "u7", "ư");
+    expectEq(st, "J13", "u72", "ừ");
+    expectEq(st, "J14", "d9", "đ");
+
+    printf("\n== K. Modern vs old orthography (docs §5) ==\n");
+    resetOptions();
+    vUseModernOrthography = 1;                 // reform: mark on the main vowel
+    expectEq(st, "K1", "hoaf", "hoà");
+    expectEq(st, "K2", "hoas", "hoá");
+    expectEq(st, "K3", "hoar", "hoả");
+    expectEq(st, "K4", "thuyf", "thuỳ");
+    expectEq(st, "K5", "thuys", "thuý");
+    expectEq(st, "K6", "thuyr", "thuỷ");
+    vUseModernOrthography = 0;                  // traditional: mark on o / u
+    expectEq(st, "K7", "hoaf", "hòa");
+    expectEq(st, "K8", "hoas", "hóa");
+    expectEq(st, "K9", "hoar", "hỏa");
+    expectEq(st, "K10", "thuyf", "thùy");
+    expectEq(st, "K11", "thuys", "thúy");
+    expectEq(st, "K12", "thuyr", "thủy");
+
+    printf("\n== L. Tone placement on diphthongs/triphthongs (docs §4) ==\n");
+    resetOptions();
+    expectEq(st, "L1", "ais", "ái");           // ai: mark on a
+    expectEq(st, "L2", "oais", "oái");         // oai: mark on middle a
+    expectEq(st, "L3", "nguwowif", "người");   // ươi: mark on ơ
+    expectEq(st, "L4", "dduocwj", "được");     // uô/ươ rhyme + stop coda
+    expectEq(st, "L5", "yeeuj", "yệu");        // yêu: mark on ê
+
+    printf("\n== M. Final consonant + tone constraint (docs §3) ==\n");
+    resetOptions();
+    // Syllables closed by a stop coda (p, t, c, ch) take only sắc or nặng.
+    expectEq(st, "M1", "caasp", "cấp");
+    expectEq(st, "M2", "caapj", "cập");
+    expectEq(st, "M3", "asch", "ách");
+    expectEq(st, "M4", "ajch", "ạch");
+    expectEq(st, "M5", "sachs", "sách");
+    expectEq(st, "M6", "ichs", "ích");
+
+    printf("\n== N. Favor Vietnamese for ambiguous English tokens (docs §6) ==\n");
+    resetOptions();
+    vAutoDetectEnglish = 1;
+    // The docs suggest restoring "of"/"if"; 84Key instead favors the valid
+    // Vietnamese reading (same policy as group E), so these become ò / ì.
+    expectEq(st, "N1", "of", "ò");
+    expectEq(st, "N2", "if", "ì");
+    // Tokens with an impossible Vietnamese nucleus (ea) stay English mid-word.
+    expectAscii(st, "N3", "search");
+    expectAscii(st, "N4", "teacher");
+    expectAscii(st, "N5", "beach");
+    expectAscii(st, "N6", "real");
+
     printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
 }
