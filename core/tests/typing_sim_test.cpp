@@ -253,6 +253,13 @@ int main() {
         {"E-gun", "guns ",    "guns "},
         {"E-ggl", "google ",  "google "},
         {"E-as",  "as",       "á"},        // English word but valid VN -> keep VN
+        // Regression: "dd" is an English-dict word AND the đ digraph; with detect
+        // ON it must still form đ-words (it is a valid Vietnamese prefix).
+        {"E-dd",  "dd",        "đ"},
+        {"E-ddi", "ddi",       "đi"},
+        {"E-dduo","dduwowngf", "đường"},
+        {"E-ddv", "ddi Vieejt Nam", "đi Việt Nam"},
+        {"E-dds", "dd hocj",   "đ học"},   // bare đ at a word break must not revert
     };
     for (auto& c : english) run(st, c);
     vAutoDetectEnglish = 0;

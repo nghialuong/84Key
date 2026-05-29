@@ -1360,9 +1360,13 @@ static bool shouldTreatAsEnglish() {
     if (!engDetectEnabled() || !buildEngRawFromStates())
         return false;
 
-    //Complete English word: suppress unless it is also a valid Vietnamese word.
+    //Complete English word: suppress unless the keystrokes are also a valid
+    //Vietnamese word, OR could still grow into one. The prefix check matters for
+    //transform digraphs that are themselves short English words but the start of
+    //many Vietnamese words (e.g. "dd" -> đ, the prefix of đi/đường/...): without
+    //it, English-detection would wrongly block every đ-word.
     if (isEnglishWord(_engRawWord))
-        return !isVietByTelex(_engRawWord);
+        return !isVietByTelex(_engRawWord) && !isVietByTelexPrefix(_engRawWord);
 
     //Prefix of an English word (e.g. "goo" of "google"): stricter, also bail out
     //if the keystrokes could still grow into a Vietnamese word.
@@ -1379,7 +1383,10 @@ static bool shouldTreatAsEnglish() {
 static bool restoreEnglishAtBreak(const int& handleCode) {
     if (!engDetectEnabled() || _index == 0 || !buildEngRawFromStates())
         return false;
-    if (!isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord))
+    //Don't restore if the keystrokes spell a Vietnamese word, or are still a
+    //valid Vietnamese prefix (e.g. "dd" -> đ): otherwise a complete-English-word
+    //digraph like "dd" would be reverted at the break, undoing the diacritic.
+    if (!isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord))
         return false;
 
     //Only act if the current on-screen word actually differs from the raw keys.
