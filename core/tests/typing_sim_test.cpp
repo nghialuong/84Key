@@ -388,6 +388,18 @@ int main() {
         {"E-ww",   "ww",       "w"},
         {"E-ww2",  "ww done",  "w done"},
         {"E-win",  "window ",  "window "},  // leading-w English: ư restored at break
+        // Double-tone-key escape: "is"->í (prefer VN), but a repeated tone key
+        // ("iss") drops the mark at the word break to give the literal English
+        // "is". Only for non-dictionary strings — real English words (miss/class/
+        // issue/assign) come out whole via detection + the word-break restore.
+        {"E-iss",  "iss done",  "is done"},
+        {"E-iss2", "iss. ok",   "is. ok"},
+        {"E-ass",  "ass ",      "as "},
+        {"E-miss", "miss ",     "miss "},
+        {"E-clas", "class ",    "class "},
+        {"E-isu",  "issue ",    "issue "},
+        {"E-asg",  "assign ",   "assign "},
+        {"E-is",   "is ",       "í "},        // single tone key still prefers VN
     };
     for (auto& c : english) run(st, c);
     vAutoDetectEnglish = 0;

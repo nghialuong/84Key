@@ -96,8 +96,10 @@ static Byte _stateIndex = 0;
 static bool tempDisableKey = false;
 //Set when a standalone vowel is toggled back to a literal letter this word
 //("ww" -> "w"). Tells the word-break English restore to leave the word alone, so
-//the deliberate escape isn't reverted to the raw English keystrokes (e.g. "ww ").
-static bool _engStandaloneToggle = false;
+//the escape isn't reverted to the raw English keystrokes (e.g. "ww " stays "w ").
+//(The tone-removal escape "iss" -> "is" deliberately does NOT set this: there the
+//word-break restore is wanted, so real English words like "miss" come out whole.)
+static bool _engTelexEscape = false;
 static int capsElem;
 static int key;
 static int markElem;
@@ -141,7 +143,7 @@ void* vKeyInit() {
     _index = 0;
     _stateIndex = 0;
     tempDisableKey = false;
-    _engStandaloneToggle = false;
+    _engTelexEscape = false;
     _useSpellCheckingBefore = vCheckSpelling;
     _typingStatesData.clear();
     _typingStates.clear();
@@ -466,7 +468,7 @@ void startNewSession() {
     hBPC = 0;
     hNCC = 0;
     tempDisableKey = false;
-    _engStandaloneToggle = false;
+    _engTelexEscape = false;
     _stateIndex = 0;
     _hasHandledMacro = false;
     _hasHandleQuickConsonant = false;
@@ -785,7 +787,7 @@ void insertMark(const Uint32& markMask, const bool& canModifyFlag) {
     kk = _index - 1 - VSI;
     //if duplicate same mark -> restore
     if (TypingWord[VWSM] & markMask) {
-        
+
         TypingWord[VWSM] &= ~MARK_MASK;
         if (canModifyFlag)
             hCode = vRestore;
@@ -957,7 +959,7 @@ void insertW(const Uint16& data, const bool& isCaps) {
                         hCode = vWillProcess;
                         if (CHR(ii) == KEY_U){
                             TypingWord[ii] = KEY_W | ((TypingWord[ii] & CAPS_MASK) ? CAPS_MASK : 0);
-                            _engStandaloneToggle = true;
+                            _engTelexEscape = true;
                         } else if (CHR(ii) == KEY_O) {
                             hCode = vRestore;
                             TypingWord[ii] = KEY_O | ((TypingWord[ii] & CAPS_MASK) ? CAPS_MASK : 0);
@@ -1397,7 +1399,7 @@ static bool isStandaloneToggle(const Uint16& data) {
 //check intentionally leaves to Vietnamese, e.g. "google", "message"), restore
 //the raw keystrokes so the final word is clean. Returns true if it restored.
 static bool restoreEnglishAtBreak(const int& handleCode) {
-    if (!engDetectEnabled() || _index == 0 || _engStandaloneToggle || !buildEngRawFromStates())
+    if (!engDetectEnabled() || _index == 0 || _engTelexEscape || !buildEngRawFromStates())
         return false;
     //Don't restore if the keystrokes spell a Vietnamese word, or are still a
     //valid Vietnamese prefix (e.g. "dd" -> đ): otherwise a complete-English-word
@@ -1422,6 +1424,47 @@ static bool restoreEnglishAtBreak(const int& handleCode) {
         hData[_stateIndex - 1 - i] = TypingWord[i];
     }
     _index = _stateIndex;
+    return true;
+}
+
+//At a word boundary, drop a doubled-tone-key mark so an ambiguous short word the
+//user "escaped" comes out as the literal English letters: "is" -> í (prefer
+//Vietnamese), but a 2nd "s" ("iss") -> "is". Only fires when the word is neither a
+//real English word (those are handled by restoreEnglishAtBreak, e.g. "miss",
+//"issue") nor valid Vietnamese, and the mark's tone key was actually pressed twice
+//(so single-tone Vietnamese like "í"/"á" is never touched). Returns true if it acted.
+static bool dropDoubledToneAtBreak(const int& handleCode) {
+    if (!engDetectEnabled() || _index == 0 || !buildEngRawFromStates())
+        return false;
+    if (isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord))
+        return false;
+
+    Uint32 markMask = 0;
+    for (i = 0; i < _index; i++) {
+        if (TypingWord[i] & MARK_MASK) { markMask = TypingWord[i] & MARK_MASK; break; }
+    }
+    if (!markMask)
+        return false;
+    Uint16 toneKey = markMask == MARK1_MASK ? KEY_S : markMask == MARK2_MASK ? KEY_F :
+                     markMask == MARK3_MASK ? KEY_R : markMask == MARK4_MASK ? KEY_X :
+                     markMask == MARK5_MASK ? KEY_J : 0;
+    if (!toneKey)
+        return false;
+
+    int toneKeyCount = 0;
+    for (i = 0; i < _stateIndex; i++)
+        if ((KeyStates[i] & CHAR_MASK) == toneKey)
+            toneKeyCount++;
+    if (toneKeyCount < 2)
+        return false;
+
+    hCode = handleCode;
+    hBPC = _index;
+    for (i = 0; i < _index; i++)
+        TypingWord[i] &= ~MARK_MASK;
+    hNCC = _index;
+    for (i = 0; i < _index; i++)
+        hData[_index - 1 - i] = GET(TypingWord[i]);
     return true;
 }
 
@@ -1453,7 +1496,8 @@ void vKeyHandleEvent(const vKeyEvent& event,
             if (tempDisableKey && !checkRestoreIfWrongSpelling(vRestoreAndStartNewSession)) {
                 hCode = vDoNothing;
             }
-        } else if (!_hasHandledMacro && restoreEnglishAtBreak(vRestoreAndStartNewSession)) {
+        } else if (!_hasHandledMacro && (restoreEnglishAtBreak(vRestoreAndStartNewSession)
+                                         || dropDoubledToneAtBreak(vRestoreAndStartNewSession))) {
             //We are already in the word-break / number / control branch, so the
             //word is ending no matter which key did it — space, ".", "!", numpad
             //".", a Cmd-combo, etc. restoreEnglishAtBreak self-gates (it only acts
@@ -1517,7 +1561,8 @@ void vKeyHandleEvent(const vKeyEvent& event,
                 hCode = vDoNothing;
             }
             _spaceCount++;
-        } else if (!_hasHandledMacro && restoreEnglishAtBreak(vRestore)) { //English word -> restore raw keystrokes
+        } else if (!_hasHandledMacro && (restoreEnglishAtBreak(vRestore)
+                                         || dropDoubledToneAtBreak(vRestore))) { //English word restore, or drop a doubled-tone escape ("iss" -> "is")
             _spaceCount++;
         } else { //do nothing with SPACE KEY
             hCode = vDoNothing;

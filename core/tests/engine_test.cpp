@@ -274,6 +274,19 @@ int main() {
     expectEq(st, "E1", "as", "á");
     expectEq(st, "E2", "cur", "củ");
     expectEq(st, "E3", "cos", "có");
+    // Double-tone-key escape: prefer VN on the first tone key (E1-E3), but a
+    // repeated tone key drops the mark to force the literal English letters.
+    // Only for non-dictionary strings; real English words come out whole via
+    // detection + word-break restore (E7-E8), not via the escape.
+    // "iss"/"ass" are English prefixes (issue/assign), so the escape resolves at
+    // the word break; "uss" isn't a prefix, so it resolves at the keystroke.
+    expectEq(st, "E4", "iss ", "is ");
+    expectEq(st, "E5", "ass ", "as ");
+    expectEq(st, "E6", "uss", "us");
+    expectAscii(st, "E7", "miss", true);
+    expectAscii(st, "E8", "class", true);
+    expectAscii(st, "E9", "issue", true);     // English word with "iss" prefix stays whole
+    expectAscii(st, "E10", "assign", true);
 
     printf("\n== F. Option OFF = identical legacy behavior ==\n");
     resetOptions();
