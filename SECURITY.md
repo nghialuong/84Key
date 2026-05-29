@@ -15,11 +15,8 @@
 Please report security issues **privately** — do not open a public issue, as
 that could expose users before a fix is available.
 
-You can report a vulnerability through either of:
-
-1. **GitHub Security Advisories** (preferred):
-   <https://github.com/nghialuong/84Key/security/advisories/new>
-2. **Email:** [INSERT SECURITY EMAIL]
+Please report it privately through **GitHub Security Advisories**:
+<https://github.com/nghialuong/84Key/security/advisories/new>
 
 Please include a description of the issue, steps to reproduce, the affected
 version, and any relevant environment details. We aim to acknowledge reports

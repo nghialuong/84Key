@@ -27,6 +27,9 @@ Package.resolved
 *.zip
 *.app
 
+# --- Local-only test fixtures (e.g. pasted articles that may be copyrighted) ---
+core/tests/cases/test_1.txt
+
 # --- Misc ---
 *.log
 .env

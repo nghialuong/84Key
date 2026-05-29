@@ -13,7 +13,7 @@
 #   1. One-time, create a notarytool keychain profile (you enter your Apple ID and
 #      an app-specific password from appleid.apple.com):
 #        xcrun notarytool store-credentials "84key-notary" \
-#            --apple-id "you@example.com" --team-id "TAFDRXJZSR"
+#            --apple-id "you@example.com" --team-id "<YOUR_TEAM_ID>"
 #   2. Build + notarize + staple:
 #        KEY84_NOTARY_PROFILE=84key-notary bash tools/package.sh
 #   The resulting build/84Key.dmg opens normally on any Mac (no Gatekeeper warning).

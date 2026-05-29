@@ -25,9 +25,11 @@ orientation.
 
 ## Reporting
 
-If you experience or witness unacceptable behavior, please report it privately
-to the maintainers at **[INSERT CONTACT EMAIL]**. Reports will be handled
-confidentially and reviewed as promptly as possible.
+If you experience or witness unacceptable behavior, please report it privately to
+the maintainers via GitHub — open a confidential report through
+[GitHub Security Advisories](https://github.com/nghialuong/84Key/security/advisories/new),
+or contact a maintainer directly through their GitHub profile. Reports will be
+handled confidentially and reviewed as promptly as possible.
 
 ## Enforcement
 
