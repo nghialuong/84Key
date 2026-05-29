@@ -1,0 +1,486 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		080C562B755701C4BCE7AE63 /* ServiceManagement.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085237D712AEEA06432198A6 /* ServiceManagement.framework */; };
+		24482B6F1C2BDD94A2A8B5BB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0467AC75FAAB4925903F244A /* AppDelegate.swift */; };
+		38584869C1388E5ECB009D3D /* InputController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 76D6397CA6F9E5BE642D9381 /* InputController.mm */; };
+		394BD58B1FA7E0B74E09D94D /* EnglishDetect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 346834B1FB4582BDFFD78C95 /* EnglishDetect.cpp */; };
+		543DBE4F6172DDE24CCC7B71 /* ConvertTool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 347D482A1778708F877ABB7D /* ConvertTool.cpp */; };
+		5499C2FF468494F47AC1F930 /* AppController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AE3B922AED954F8DF4AA548 /* AppController.swift */; };
+		5ABED8A7FDA6CF03D831D186 /* EngineGlobals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2EC8E0C2A29EBDA375D5EFBE /* EngineGlobals.cpp */; };
+		5EFBB549AC873A5B611E7DFC /* Engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C921456CE8030DD3617E34E8 /* Engine.cpp */; };
+		6201415A13C08077BFBFDC20 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B32E1258BBD63E72651EF8 /* OnboardingView.swift */; };
+		873536A347CFC1B8E7DE7193 /* Vietnamese.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2FBCA6AEC25013EB22A612B3 /* Vietnamese.cpp */; };
+		B903FD9C507C300801DE2309 /* SmartSwitchKey.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C510AB2E4A5D306BA3754A41 /* SmartSwitchKey.cpp */; };
+		B9F18A052F8A7E9F4DDE36D0 /* Macro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6788FBF962253F950767FB81 /* Macro.cpp */; };
+		D66185F4A495856DAE3BFAF9 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 688A4D1C0679B8688F705E31 /* Carbon.framework */; };
+		D9ED14F5CAF2F8D4ACD4F64D /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */; };
+		DDD1FF68B434D0D4A8042886 /* viet_telex.dat in Resources */ = {isa = PBXBuildFile; fileRef = 118A23563A5DB117B8112720 /* viet_telex.dat */; };
+		E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979D9679B703249C62E9D1E /* SettingsView.swift */; };
+		EBF663A0A17D0B69682218C0 /* LoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */; };
+		F5DCA2313A3A5606BECCAE7D /* english_words.dat in Resources */ = {isa = PBXBuildFile; fileRef = 030075AD889FD499BBAFF1D9 /* english_words.dat */; };
+		FB9015AE1BB0AECCEFA40136 /* Key84App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF8323C28336218318DCF13 /* Key84App.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		030075AD889FD499BBAFF1D9 /* english_words.dat */ = {isa = PBXFileReference; path = english_words.dat; sourceTree = "<group>"; };
+		0467AC75FAAB4925903F244A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		06EFA2EE9DF5939A3C0D97B8 /* Engine.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Engine.h; sourceTree = "<group>"; };
+		085237D712AEEA06432198A6 /* ServiceManagement.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ServiceManagement.framework; path = System/Library/Frameworks/ServiceManagement.framework; sourceTree = SDKROOT; };
+		118A23563A5DB117B8112720 /* viet_telex.dat */ = {isa = PBXFileReference; path = viet_telex.dat; sourceTree = "<group>"; };
+		136A13AA78B3DC493BC494CF /* 84Key.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = 84Key.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		1979D9679B703249C62E9D1E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		2A375D674044ECA18C1D0D67 /* DataType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DataType.h; sourceTree = "<group>"; };
+		2EC8E0C2A29EBDA375D5EFBE /* EngineGlobals.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EngineGlobals.cpp; sourceTree = "<group>"; };
+		2FBCA6AEC25013EB22A612B3 /* Vietnamese.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Vietnamese.cpp; sourceTree = "<group>"; };
+		346834B1FB4582BDFFD78C95 /* EnglishDetect.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EnglishDetect.cpp; sourceTree = "<group>"; };
+		347D482A1778708F877ABB7D /* ConvertTool.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ConvertTool.cpp; sourceTree = "<group>"; };
+		5AE1443D7226873261EA17E9 /* SmartSwitchKey.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SmartSwitchKey.h; sourceTree = "<group>"; };
+		60D093CB51083705780984DA /* Key84-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Key84-Bridging-Header.h"; sourceTree = "<group>"; };
+		6788FBF962253F950767FB81 /* Macro.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Macro.cpp; sourceTree = "<group>"; };
+		688A4D1C0679B8688F705E31 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = System/Library/Frameworks/Carbon.framework; sourceTree = SDKROOT; };
+		6EF99FC2ABA0752A92217C70 /* InputController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = InputController.h; sourceTree = "<group>"; };
+		72B32E1258BBD63E72651EF8 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		76D6397CA6F9E5BE642D9381 /* InputController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = InputController.mm; sourceTree = "<group>"; };
+		80D1CD70559CFEEAA46701D7 /* win32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = win32.h; sourceTree = "<group>"; };
+		8AE3B922AED954F8DF4AA548 /* AppController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppController.swift; sourceTree = "<group>"; };
+		9983066B472363CAAF6C02F1 /* mac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mac.h; sourceTree = "<group>"; };
+		C510AB2E4A5D306BA3754A41 /* SmartSwitchKey.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SmartSwitchKey.cpp; sourceTree = "<group>"; };
+		C871FA1E7555C8E26448386F /* linux.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = linux.h; sourceTree = "<group>"; };
+		C921456CE8030DD3617E34E8 /* Engine.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = Engine.cpp; sourceTree = "<group>"; };
+		CB6AA51CA929AE10CEE1467C /* Macro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Macro.h; sourceTree = "<group>"; };
+		D352DAB433E490572F41465F /* ConvertTool.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ConvertTool.h; sourceTree = "<group>"; };
+		D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemManager.swift; sourceTree = "<group>"; };
+		DBF8323C28336218318DCF13 /* Key84App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Key84App.swift; sourceTree = "<group>"; };
+		E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		ED02531F19339DA19466E04B /* EnglishDetect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnglishDetect.h; sourceTree = "<group>"; };
+		F324EA9E8D67A922D23BEB6C /* Vietnamese.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Vietnamese.h; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		12822DE004D95467744E2678 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D66185F4A495856DAE3BFAF9 /* Carbon.framework in Frameworks */,
+				080C562B755701C4BCE7AE63 /* ServiceManagement.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0F3ADD837E051574FCAA2CF6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				688A4D1C0679B8688F705E31 /* Carbon.framework */,
+				085237D712AEEA06432198A6 /* ServiceManagement.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		1F4F089DA84C14E0392E14EE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				136A13AA78B3DC493BC494CF /* 84Key.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		323F531F686782C74ADB8527 /* v0.1-build */ = {
+			isa = PBXGroup;
+			children = (
+				F3F5FF64F8CBD2D533AB8502 /* core */,
+			);
+			name = "v0.1-build";
+			path = ../..;
+			sourceTree = "<group>";
+		};
+		3D562A1DCF716A2170CBB529 /* platforms */ = {
+			isa = PBXGroup;
+			children = (
+				C871FA1E7555C8E26448386F /* linux.h */,
+				9983066B472363CAAF6C02F1 /* mac.h */,
+				80D1CD70559CFEEAA46701D7 /* win32.h */,
+			);
+			path = platforms;
+			sourceTree = "<group>";
+		};
+		7AE60D4F20AE555959C7623E /* Input */ = {
+			isa = PBXGroup;
+			children = (
+				2EC8E0C2A29EBDA375D5EFBE /* EngineGlobals.cpp */,
+				6EF99FC2ABA0752A92217C70 /* InputController.h */,
+				76D6397CA6F9E5BE642D9381 /* InputController.mm */,
+			);
+			path = Input;
+			sourceTree = "<group>";
+		};
+		AA48CC94514B38A8773FFC38 /* data */ = {
+			isa = PBXGroup;
+			children = (
+				030075AD889FD499BBAFF1D9 /* english_words.dat */,
+				118A23563A5DB117B8112720 /* viet_telex.dat */,
+			);
+			path = data;
+			sourceTree = "<group>";
+		};
+		BE85D71DFBAB931782076E22 = {
+			isa = PBXGroup;
+			children = (
+				E4F9ACCB5402ECADF18F9F96 /* App */,
+				F2D50724F3C658B04BD3CC66 /* Bridge */,
+				7AE60D4F20AE555959C7623E /* Input */,
+				323F531F686782C74ADB8527 /* v0.1-build */,
+				0F3ADD837E051574FCAA2CF6 /* Frameworks */,
+				1F4F089DA84C14E0392E14EE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D0820B51004B9E3D385BA3E2 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				347D482A1778708F877ABB7D /* ConvertTool.cpp */,
+				D352DAB433E490572F41465F /* ConvertTool.h */,
+				2A375D674044ECA18C1D0D67 /* DataType.h */,
+				C921456CE8030DD3617E34E8 /* Engine.cpp */,
+				06EFA2EE9DF5939A3C0D97B8 /* Engine.h */,
+				346834B1FB4582BDFFD78C95 /* EnglishDetect.cpp */,
+				ED02531F19339DA19466E04B /* EnglishDetect.h */,
+				6788FBF962253F950767FB81 /* Macro.cpp */,
+				CB6AA51CA929AE10CEE1467C /* Macro.h */,
+				C510AB2E4A5D306BA3754A41 /* SmartSwitchKey.cpp */,
+				5AE1443D7226873261EA17E9 /* SmartSwitchKey.h */,
+				2FBCA6AEC25013EB22A612B3 /* Vietnamese.cpp */,
+				F324EA9E8D67A922D23BEB6C /* Vietnamese.h */,
+				3D562A1DCF716A2170CBB529 /* platforms */,
+			);
+			name = Engine;
+			path = engine;
+			sourceTree = "<group>";
+		};
+		E4F9ACCB5402ECADF18F9F96 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				8AE3B922AED954F8DF4AA548 /* AppController.swift */,
+				0467AC75FAAB4925903F244A /* AppDelegate.swift */,
+				E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */,
+				DBF8323C28336218318DCF13 /* Key84App.swift */,
+				D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */,
+				72B32E1258BBD63E72651EF8 /* OnboardingView.swift */,
+				1979D9679B703249C62E9D1E /* SettingsView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F2D50724F3C658B04BD3CC66 /* Bridge */ = {
+			isa = PBXGroup;
+			children = (
+				60D093CB51083705780984DA /* Key84-Bridging-Header.h */,
+			);
+			path = Bridge;
+			sourceTree = "<group>";
+		};
+		F3F5FF64F8CBD2D533AB8502 /* core */ = {
+			isa = PBXGroup;
+			children = (
+				AA48CC94514B38A8773FFC38 /* data */,
+				D0820B51004B9E3D385BA3E2 /* Engine */,
+			);
+			path = core;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		1733FAEC86FDA1C1242767B5 /* 84Key */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9305DBE0C913FDD6697AC94B /* Build configuration list for PBXNativeTarget "84Key" */;
+			buildPhases = (
+				13035D426603B97859CBB2C0 /* Sources */,
+				5256C0E898550BEC4A6525CC /* Resources */,
+				12822DE004D95467744E2678 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = 84Key;
+			packageProductDependencies = (
+			);
+			productName = 84Key;
+			productReference = 136A13AA78B3DC493BC494CF /* 84Key.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F4104C01169DFE8871330704 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = BB591CAB58D702D2E151747E /* Build configuration list for PBXProject "84Key" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = BE85D71DFBAB931782076E22;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 1F4F089DA84C14E0392E14EE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				1733FAEC86FDA1C1242767B5 /* 84Key */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5256C0E898550BEC4A6525CC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F5DCA2313A3A5606BECCAE7D /* english_words.dat in Resources */,
+				DDD1FF68B434D0D4A8042886 /* viet_telex.dat in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		13035D426603B97859CBB2C0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5499C2FF468494F47AC1F930 /* AppController.swift in Sources */,
+				24482B6F1C2BDD94A2A8B5BB /* AppDelegate.swift in Sources */,
+				D9ED14F5CAF2F8D4ACD4F64D /* AppSettings.swift in Sources */,
+				543DBE4F6172DDE24CCC7B71 /* ConvertTool.cpp in Sources */,
+				5EFBB549AC873A5B611E7DFC /* Engine.cpp in Sources */,
+				5ABED8A7FDA6CF03D831D186 /* EngineGlobals.cpp in Sources */,
+				394BD58B1FA7E0B74E09D94D /* EnglishDetect.cpp in Sources */,
+				38584869C1388E5ECB009D3D /* InputController.mm in Sources */,
+				FB9015AE1BB0AECCEFA40136 /* Key84App.swift in Sources */,
+				EBF663A0A17D0B69682218C0 /* LoginItemManager.swift in Sources */,
+				B9F18A052F8A7E9F4DDE36D0 /* Macro.cpp in Sources */,
+				6201415A13C08077BFBFDC20 /* OnboardingView.swift in Sources */,
+				E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */,
+				B903FD9C507C300801DE2309 /* SmartSwitchKey.cpp in Sources */,
+				873536A347CFC1B8E7DE7193 /* Vietnamese.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		18630E3D9D65B47334886A90 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/Input",
+					"$(SRCROOT)/Bridge",
+					"$(SRCROOT)/../../core/engine",
+				);
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nghialuong.key84;
+				PRODUCT_MODULE_NAME = Key84;
+				PRODUCT_NAME = 84Key;
+				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "Bridge/Key84-Bridging-Header.h";
+			};
+			name = Debug;
+		};
+		2D35D6A8AEF105BB9B680FA7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		88551F9BFED074F1A982CDE6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		BD9FD6488E40089600588002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/Input",
+					"$(SRCROOT)/Bridge",
+					"$(SRCROOT)/../../core/engine",
+				);
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nghialuong.key84;
+				PRODUCT_MODULE_NAME = Key84;
+				PRODUCT_NAME = 84Key;
+				SDKROOT = macosx;
+				SWIFT_OBJC_BRIDGING_HEADER = "Bridge/Key84-Bridging-Header.h";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		9305DBE0C913FDD6697AC94B /* Build configuration list for PBXNativeTarget "84Key" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				18630E3D9D65B47334886A90 /* Debug */,
+				BD9FD6488E40089600588002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BB591CAB58D702D2E151747E /* Build configuration list for PBXProject "84Key" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				88551F9BFED074F1A982CDE6 /* Debug */,
+				2D35D6A8AEF105BB9B680FA7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = F4104C01169DFE8871330704 /* Project object */;
+}

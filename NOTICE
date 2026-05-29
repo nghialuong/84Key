@@ -1,0 +1,36 @@
+84Key
+Copyright (c) 2026 The 84Key Authors
+
+This software is licensed under the GNU General Public License version 3
+(GPLv3). See the LICENSE file for the full license text.
+
+
+Derived work
+------------
+
+84Key's Vietnamese typing engine is derived from OpenKey
+(https://github.com/tuyenvm/OpenKey), Copyright (c) Mai Vũ Tuyên,
+licensed under GPLv3. Because the engine is GPLv3, 84Key as a whole is
+also distributed under GPLv3. We gratefully acknowledge the OpenKey
+project for the core typing logic that makes accurate Vietnamese input
+possible.
+
+
+Third-party data
+----------------
+
+1. English word list
+   Source: google-10000-english
+   (https://github.com/first20hours/google-10000-english)
+   License: Public domain / MIT.
+   Used to power 84Key's automatic English-word detection.
+
+2. Vietnamese syllable dictionary
+   The Vietnamese-by-Telex syllable dictionary is generated from
+   linguistic rules by this project. It is not derived from, and does
+   not incorporate, any external or scraped word list.
+
+
+All other code in this repository, including the SwiftUI macOS
+application, is original work by The 84Key Authors and is licensed
+under GPLv3.

@@ -1,0 +1,36 @@
+# 84Key typing test fixtures — drop your own *.txt files in this folder.
+#
+# One case per line:   <telex keys> => <expected output>
+#   (you can also separate with a TAB instead of " => ")
+# Lines starting with '#' are comments; blank lines are ignored.
+# Trailing whitespace is ignored. Type a whole sentence on one line if you like;
+# spaces are typed as word breaks.
+#
+# Directives change the mode for the lines that follow (each file starts as
+# Telex with English-detection OFF, modern orthography ON, spell-check ON):
+#   @input=telex|vni|simple1|simple2
+#   @detect=on|off      @modern=on|off      @spell=on|off      @reset
+
+# --- Telex words ---
+dd => đ
+ddi => đi
+tieesng => tiếng
+vieejt => việt
+nguwowif => người
+truwowngf => trường
+ddoongf => đồng
+
+# --- A short sentence (spaces are word breaks) ---
+Tooi ddang hocj gox tieesng Vieejt => Tôi đang học gõ tiếng Việt
+
+# --- English auto-detection: English stays as typed, Vietnamese keeps tones ---
+@detect=on
+project => project
+password => password
+as => á
+@detect=off
+
+# --- VNI ---
+@input=vni
+tie61ng => tiếng
+na8ng5 => nặng
