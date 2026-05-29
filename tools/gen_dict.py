@@ -115,17 +115,39 @@ def velar_for(rhyme_group, sound):
     return None  # u-glide handled via "qu" separately
 
 
+# Trailing finals (coda consonants + offglides), longest first. Telex lets the
+# tone key be typed either right after the vowel or after the final, so we emit
+# both spellings — otherwise the after-vowel form (e.g. "barn" for bản) would not
+# be recognised as Vietnamese and could collide with an English word ("barn").
+FINALS = ("nh", "ng", "ch", "c", "m", "n", "p", "t", "i", "o", "u", "y")
+
+
+def split_final(rhyme):
+    for f in FINALS:
+        if rhyme.endswith(f) and len(rhyme) > len(f):
+            return rhyme[:-len(f)], f
+    return rhyme, ""
+
+
+def _emit(out, word):
+    if word and word.isascii() and word.isalpha() and word not in BLOCKLIST:
+        out.add(word)
+
+
 def add_syllable(out, onset, rhyme):
     base = onset + rhyme
+    vowel, final = split_final(rhyme)
     stop = rhyme.endswith(STOP_CODAS)
     for tone in TONES:
-        if stop and tone in ("f", "r", "x", ""):
-            # stop codas (p/t/c/ch) only carry sắc or nặng
-            if tone != "s" and tone != "j":
-                continue
-        word = base + tone
-        if word and word.isascii() and word.isalpha() and word not in BLOCKLIST:
-            out.add(word)
+        if tone == "":
+            if not stop:           # a bare stop-coda syllable needs sắc/nặng
+                _emit(out, base)
+            continue
+        if stop and tone not in ("s", "j"):
+            continue               # stop codas (p/t/c/ch) only carry sắc or nặng
+        _emit(out, base + tone)                      # tone after the final
+        if final:
+            _emit(out, onset + vowel + tone + final)  # tone right after the vowel
 
 
 def gen_viet():
@@ -146,6 +168,10 @@ def gen_viet():
     for rhyme in RHYMES_UGLIDE:
         if rhyme.startswith("u"):
             add_syllable(out, "q", rhyme)  # q + u... = "qu..."
+    # The "gi" onset can stand with just a tone (gì, gí, gị, gĩ, gỉ, gi): the vowel
+    # i is absorbed into the onset, so it isn't produced by onset×rhyme above.
+    for tone in TONES:
+        _emit(out, "gi" + tone)
     return out
 
 
