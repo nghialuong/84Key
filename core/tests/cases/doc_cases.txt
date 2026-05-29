@@ -1,0 +1,28 @@
+# Cases derived from the gonhanh.org Vietnamese docs (validation-algorithm.md &
+# vietnamese-language-system.md). Report-only (see docs/TESTING.md). These cover
+# what fixtures are uniquely good at — valid syllables round-tripped through the
+# engine, and English left untouched inside running text — complementing the
+# keyed gating cases (groups H–N) in engine_test.cpp.
+
+# --- English auto-detection inside running text (English stays as typed) ---
+@detect=on
+project => project
+password => password
+internet => internet
+you can download the server side files => you can download the server side files
+search the database then type your query => search the database then type your query
+# Tone-first Telex order at a word break: "ít" typed i-s-t must stay Vietnamese,
+# not revert to the English word "ist" (regression).
+an ist com => an ít com
+@detect=off
+
+# --- Valid Vietnamese syllables & words (round-trip: reverse-encoded & retyped)
+# Drawn from the validation doc's "valid examples": ba/ca/an/em/gia/giàu/kẻ/kỷ/
+# nghe/nghĩ/nghiêng/trường/người/được, plus full sentences. ---
+@roundtrip
+@detect=on
+Bé na nghe nghĩ nghiêng, người được trường giàu.
+Anh ấy mua phở bò ở Hà Nội rồi về quê hương.
+Quýt ngọt, đường mía, kẻ kỷ niệm khó quên.
+Cộng hòa xã hội chủ nghĩa Việt Nam muôn năm.
+Sinh viên nghiên cứu ngôn ngữ học tại trường đại học.

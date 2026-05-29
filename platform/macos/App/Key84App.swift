@@ -32,22 +32,22 @@ private struct MenuContent: View {
 
     var body: some View {
         if app.isRunning {
-            Button(settings.language == 1 ? "Switch to English" : "Switch to Vietnamese") {
+            Button(settings.language == 1 ? "Chuyển sang tiếng Anh" : "Chuyển sang tiếng Việt") {
                 settings.language = (settings.language == 1) ? 0 : 1
             }
             .keyboardShortcut("e")
         } else {
             Text(app.hasPermission
-                 ? "Permission granted — click Restart to activate"
-                 : "⚠︎ Accessibility permission needed")
-            Button("Open Accessibility Settings…") { app.openAccessibilitySettings() }
-            Button("Restart 84Key") { app.relaunch() }
+                 ? "Đã cấp quyền — bấm Khởi động lại để kích hoạt"
+                 : "⚠︎ Cần quyền Trợ năng (Accessibility)")
+            Button("Mở cài đặt Trợ năng…") { app.openAccessibilitySettings() }
+            Button("Khởi động lại 84Key") { app.relaunch() }
         }
 
         Divider()
-        Button("Settings…") { openSettings() }
+        Button("Cài đặt…") { openSettings() }
             .keyboardShortcut(",")
-        Button("Quit 84Key") { NSApplication.shared.terminate(nil) }
+        Button("Thoát 84Key") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
     }
 }

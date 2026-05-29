@@ -2,6 +2,81 @@
 
 ![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 
+**Tiếng Việt** · [English](#english)
+
+84Key là bộ gõ tiếng Việt miễn phí, mã nguồn mở dành cho macOS.
+
+Tên gọi "84Key" lấy cảm hứng từ mã vùng điện thoại quốc tế +84 của Việt Nam.
+84Key sử dụng lại engine gõ tiếng Việt viết bằng C++ của
+[OpenKey](https://github.com/tuyenvm/OpenKey) và đóng gói trong một ứng dụng
+SwiftUI hiện đại trên thanh menu, bổ sung hai cải tiến nổi bật: tự động nhận
+diện từ tiếng Anh và sửa lỗi đặt dấu trong Spotlight.
+
+> Hiện chỉ hỗ trợ macOS. Windows và Linux sẽ được hỗ trợ trong tương lai.
+
+## Tính năng
+
+- **Gõ tiếng Việt chính xác** với các kiểu gõ Telex, VNI và Simple Telex, dựa
+  trên engine OpenKey đã được kiểm chứng.
+- **Tự động nhận diện tiếng Anh** — khi bạn gõ một từ tiếng Anh trong kiểu
+  Telex, 84Key nhận ra và bỏ qua việc bỏ dấu, nên những từ như "feed" hay
+  "tools" hiển thị đúng mà không phải tắt bộ gõ.
+- **Sửa lỗi Spotlight** — sửa vị trí dấu trong Spotlight và các ứng dụng xử lý
+  sai chữ tổ hợp, nhờ Accessibility API của macOS.
+- **Ứng dụng thanh menu** — ứng dụng SwiftUI gọn nhẹ nằm trên thanh menu, có
+  phần cài đặt và hướng dẫn cấp quyền Trợ năng (Accessibility).
+- **Nhiều bảng mã** — Unicode (mặc định), TCVN3, VNI-Windows, Unicode tổ hợp và
+  CP1258.
+- **Không thu thập dữ liệu.**
+
+## Quyền riêng tư
+
+84Key hoạt động **hoàn toàn cục bộ** trên máy của bạn.
+
+- **Không gửi dữ liệu thống kê.** 84Key không thu thập dữ liệu sử dụng.
+- **Không kết nối mạng khi gõ.** Những gì bạn gõ không bao giờ được gửi đi đâu.
+- **Không tài khoản, không theo dõi.**
+
+84Key cần quyền **Trợ năng (Accessibility)** của macOS để hoạt động, vì ứng
+dụng dùng `CGEvent` tap để đọc và thay thế văn bản khi bạn gõ. Quyền này chỉ
+được dùng ngay trên máy để gõ tiếng Việt chính xác và sửa lỗi Spotlight. 84Key
+chủ động không can thiệp vào các ô nhập mật khẩu (secure input).
+
+## Cài đặt & thiết lập
+
+1. Tự build ứng dụng (xem mục **Building** ở phần tiếng Anh bên dưới) hoặc tải
+   bản phát hành.
+2. Mở 84Key. Ứng dụng xuất hiện trên thanh menu.
+3. Cấp quyền **Trợ năng** khi được yêu cầu
+   (System Settings → Privacy & Security → Accessibility). Phần hướng dẫn sẽ
+   chỉ bạn từng bước.
+4. **Tắt các bộ gõ tiếng Việt khác** như OpenKey hoặc EVKey khi dùng 84Key.
+   Chạy nhiều bộ gõ cùng lúc sẽ gây xung đột phím và sai chữ.
+
+> Mã định danh ứng dụng (bundle id): `com.nghialuong.key84`.
+
+## Ghi công
+
+- **[OpenKey](https://github.com/tuyenvm/OpenKey)** của Mai Vũ Tuyên — engine
+  gõ tiếng Việt làm nền tảng cho 84Key (giấy phép GPLv3).
+- **[google-10000-english](https://github.com/first20hours/google-10000-english)**
+  — danh sách từ tiếng Anh dùng cho tính năng nhận diện tiếng Anh (public
+  domain / MIT).
+
+## Giấy phép
+
+84Key được phát hành theo giấy phép **GNU General Public License v3.0 (GPLv3)**.
+Xem tệp [LICENSE](LICENSE) để biết toàn văn.
+
+Vì 84Key dùng lại engine từ OpenKey (vốn theo GPLv3), 84Key cũng phải giữ giấy
+phép GPLv3.
+
+---
+
+# English
+
+![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)
+
 A free, open-source Vietnamese input method (bộ gõ tiếng Việt) for macOS.
 
 84Key takes its name from Vietnam's +84 international calling code. It reuses
@@ -101,75 +176,3 @@ future release); local development builds do not.
 
 Because 84Key derives its typing engine from OpenKey, which is GPLv3, 84Key
 must remain GPLv3. See [NOTICE](NOTICE) for attribution details.
-
----
-
-# Tiếng Việt
-
-![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)
-
-84Key là bộ gõ tiếng Việt miễn phí, mã nguồn mở dành cho macOS.
-
-Tên gọi "84Key" lấy cảm hứng từ mã vùng điện thoại quốc tế +84 của Việt Nam.
-84Key sử dụng lại engine gõ tiếng Việt viết bằng C++ của
-[OpenKey](https://github.com/tuyenvm/OpenKey) và đóng gói trong một ứng dụng
-SwiftUI hiện đại trên thanh menu, bổ sung hai cải tiến nổi bật: tự động nhận
-diện từ tiếng Anh và sửa lỗi đặt dấu trong Spotlight.
-
-> Hiện chỉ hỗ trợ macOS. Windows và Linux sẽ được hỗ trợ trong tương lai.
-
-## Tính năng
-
-- **Gõ tiếng Việt chính xác** với các kiểu gõ Telex, VNI và Simple Telex, dựa
-  trên engine OpenKey đã được kiểm chứng.
-- **Tự động nhận diện tiếng Anh** — khi bạn gõ một từ tiếng Anh trong kiểu
-  Telex, 84Key nhận ra và bỏ qua việc bỏ dấu, nên những từ như "feed" hay
-  "tools" hiển thị đúng mà không phải tắt bộ gõ.
-- **Sửa lỗi Spotlight** — sửa vị trí dấu trong Spotlight và các ứng dụng xử lý
-  sai chữ tổ hợp, nhờ Accessibility API của macOS.
-- **Ứng dụng thanh menu** — ứng dụng SwiftUI gọn nhẹ nằm trên thanh menu, có
-  phần cài đặt và hướng dẫn cấp quyền Trợ năng (Accessibility).
-- **Nhiều bảng mã** — Unicode (mặc định), TCVN3, VNI-Windows, Unicode tổ hợp và
-  CP1258.
-- **Không thu thập dữ liệu.**
-
-## Quyền riêng tư
-
-84Key hoạt động **hoàn toàn cục bộ** trên máy của bạn.
-
-- **Không gửi dữ liệu thống kê.** 84Key không thu thập dữ liệu sử dụng.
-- **Không kết nối mạng khi gõ.** Những gì bạn gõ không bao giờ được gửi đi đâu.
-- **Không tài khoản, không theo dõi.**
-
-84Key cần quyền **Trợ năng (Accessibility)** của macOS để hoạt động, vì ứng
-dụng dùng `CGEvent` tap để đọc và thay thế văn bản khi bạn gõ. Quyền này chỉ
-được dùng ngay trên máy để gõ tiếng Việt chính xác và sửa lỗi Spotlight. 84Key
-chủ động không can thiệp vào các ô nhập mật khẩu (secure input).
-
-## Cài đặt & thiết lập
-
-1. Tự build ứng dụng (xem mục **Building** ở trên) hoặc tải bản phát hành.
-2. Mở 84Key. Ứng dụng xuất hiện trên thanh menu.
-3. Cấp quyền **Trợ năng** khi được yêu cầu
-   (System Settings → Privacy & Security → Accessibility). Phần hướng dẫn sẽ
-   chỉ bạn từng bước.
-4. **Tắt các bộ gõ tiếng Việt khác** như OpenKey hoặc EVKey khi dùng 84Key.
-   Chạy nhiều bộ gõ cùng lúc sẽ gây xung đột phím và sai chữ.
-
-> Mã định danh ứng dụng (bundle id): `com.nghialuong.key84`.
-
-## Ghi công
-
-- **[OpenKey](https://github.com/tuyenvm/OpenKey)** của Mai Vũ Tuyên — engine
-  gõ tiếng Việt làm nền tảng cho 84Key (giấy phép GPLv3).
-- **[google-10000-english](https://github.com/first20hours/google-10000-english)**
-  — danh sách từ tiếng Anh dùng cho tính năng nhận diện tiếng Anh (public
-  domain / MIT).
-
-## Giấy phép
-
-84Key được phát hành theo giấy phép **GNU General Public License v3.0 (GPLv3)**.
-Xem tệp [LICENSE](LICENSE) để biết toàn văn.
-
-Vì 84Key dùng lại engine từ OpenKey (vốn theo GPLv3), 84Key cũng phải giữ giấy
-phép GPLv3.
