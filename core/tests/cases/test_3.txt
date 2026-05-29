@@ -1,0 +1,14 @@
+Sáng nay tôi join một cái meeting khá dài với cả team product để review lại toàn bộ roadmap cho quý tới.
+Ban đầu tôi nghĩ buổi sync này chỉ kéo dài tầm ba mươi phút, nhưng vì có quá nhiều feedback từ phía các stakeholder nên cuối cùng cả team phải brainstorm thêm gần một tiếng nữa.
+Anh leader bên engineering raise lên vài cái concern về phần backend, đặc biệt là vấn đề performance khi lượng active user tăng đột biến vào giờ peak.
+Sau khi discuss khá lâu, chúng tôi align với nhau là sẽ ưu tiên fix mấy cái critical bug trước, rồi mới start deploy những feature mới lên environment production.
+Chị PM cũng remind mọi người phải update task lên cái tool quản lý công việc cho đầy đủ, tránh tình trạng miss deadline như cái sprint vừa rồi.
+Cá nhân tôi thấy approach này khá reasonable, vì nếu cứ chạy theo việc release feature mới mà ignore quality thì sớm muộn gì cũng dẫn đến khủng hoảng về technical debt.
+Một bạn designer trong team cũng share thêm vài cái insight từ phía user research, nhấn mạnh là cái user flow hiện tại đang hơi confusing và cần optimize lại cho smooth hơn.
+Chúng tôi quyết định sẽ chạy thêm một vòng A/B testing để validate giả thuyết trước khi commit nguồn lực vào việc redesign toàn bộ giao diện.
+Anh CTO ghé qua một lúc, nghe update tình hình rồi suggest là nên setup thêm vài cái dashboard để monitor real-time, giúp team detect issue sớm hơn thay vì để khách hàng complain mới biết.
+Mọi người đều agree là việc có data rõ ràng sẽ giúp quá trình decision-making bớt cảm tính và đáng tin hơn rất nhiều.
+Cuối buổi, chúng tôi finalize một bản action plan cụ thể, assign rõ owner cho từng đầu việc, set hẳn deadline và định nghĩa luôn cả các tiêu chí "done" để tránh hiểu nhầm.
+Ai cũng nắm được scope của mình, biết chính xác khi nào cần submit kết quả và report tiến độ để kịp cái timeline tổng thể của cả project.
+Trước khi tắt máy, mọi người còn nhanh chóng schedule một buổi follow-up vào cuối tuần để check lại progress và unblock kịp thời nếu có ai đó bị stuck.
+Nhìn chung đây là một buổi họp productive, energy của cả team khá cao, và tôi tin rằng nếu execute đúng theo plan thì chúng tôi hoàn toàn có thể ship sản phẩm đúng hạn mà vẫn giữ được chất lượng ổn định.

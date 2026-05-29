@@ -1,0 +1,7 @@
+Sáng nay tôi vừa có một cái meeting khá dài với team product để review lại toàn bộ roadmap cho quý tới.
+Thật ra ban đầu tôi nghĩ buổi họp sẽ chỉ kéo dài tầm ba mươi phút, nhưng vì có quá nhiều feedback từ phía các stakeholder nên cuối cùng mọi người phải brainstorm thêm gần một tiếng đồng hồ nữa.
+Anh leader của nhóm engineering có nêu ra một vài concern về phần backend, đặc biệt là vấn đề liên quan đến performance khi số lượng user tăng đột biến vào giờ cao điểm.
+Sau khi cả team thảo luận, chúng tôi quyết định sẽ ưu tiên fix mấy cái bug nghiêm trọng trước, rồi mới bắt đầu deploy những tính năng mới lên môi trường production.
+Chị PM cũng nhắc mọi người phải update task lên hệ thống quản lý công việc đầy đủ, tránh tình trạng miss deadline như sprint vừa rồi.
+Cá nhân tôi cảm thấy cách tiếp cận này khá hợp lý, vì nếu cứ chạy theo việc ra feature mới mà bỏ qua chất lượng thì sớm muộn gì cũng dẫn đến khủng hoảng về mặt technical debt.
+Cuối buổi, chúng tôi chốt lại một bản action plan rõ ràng, ai cũng nắm được nhiệm vụ của mình và biết chính xác khi nào cần submit kết quả để kịp tiến độ tổng thể của cả dự án.
