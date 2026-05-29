@@ -382,6 +382,12 @@ int main() {
         {"E-wow1", "wow ok",  "wow ok"},
         {"E-wow2", "wow!",    "wow!"},
         {"E-wow3", "wow.",    "wow."},
+        // Double-w escape: a 2nd w turns the standalone ư back into a literal w.
+        // Must win over English-detect even though "ww" is an English-dict word,
+        // and the escape must survive the word break (not revert to raw "ww").
+        {"E-ww",   "ww",       "w"},
+        {"E-ww2",  "ww done",  "w done"},
+        {"E-win",  "window ",  "window "},  // leading-w English: ư restored at break
     };
     for (auto& c : english) run(st, c);
     vAutoDetectEnglish = 0;

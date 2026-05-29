@@ -94,6 +94,10 @@ static Uint32 KeyStates[MAX_BUFF];
 static Byte _stateIndex = 0;
 
 static bool tempDisableKey = false;
+//Set when a standalone vowel is toggled back to a literal letter this word
+//("ww" -> "w"). Tells the word-break English restore to leave the word alone, so
+//the deliberate escape isn't reverted to the raw English keystrokes (e.g. "ww ").
+static bool _engStandaloneToggle = false;
 static int capsElem;
 static int key;
 static int markElem;
@@ -136,6 +140,8 @@ string wideStringToUtf8(const wstring& str) {
 void* vKeyInit() {
     _index = 0;
     _stateIndex = 0;
+    tempDisableKey = false;
+    _engStandaloneToggle = false;
     _useSpellCheckingBefore = vCheckSpelling;
     _typingStatesData.clear();
     _typingStates.clear();
@@ -460,6 +466,7 @@ void startNewSession() {
     hBPC = 0;
     hNCC = 0;
     tempDisableKey = false;
+    _engStandaloneToggle = false;
     _stateIndex = 0;
     _hasHandledMacro = false;
     _hasHandleQuickConsonant = false;
@@ -950,6 +957,7 @@ void insertW(const Uint16& data, const bool& isCaps) {
                         hCode = vWillProcess;
                         if (CHR(ii) == KEY_U){
                             TypingWord[ii] = KEY_W | ((TypingWord[ii] & CAPS_MASK) ? CAPS_MASK : 0);
+                            _engStandaloneToggle = true;
                         } else if (CHR(ii) == KEY_O) {
                             hCode = vRestore;
                             TypingWord[ii] = KEY_O | ((TypingWord[ii] & CAPS_MASK) ? CAPS_MASK : 0);
@@ -1376,12 +1384,20 @@ static bool shouldTreatAsEnglish() {
     return false;
 }
 
+//Typing the modifier key again to turn a standalone vowel back into its literal
+//letter ("ww" -> "w", undoing the lone-w -> ư) is a deliberate Telex escape. It must
+//run even though "ww" is an English-dictionary word, so the user can type a literal w.
+static bool isStandaloneToggle(const Uint16& data) {
+    return data == KEY_W && _index > 0 &&
+           CHR(_index - 1) == KEY_U && (TypingWord[_index - 1] & TONEW_MASK);
+}
+
 //At a word boundary, if the whole typed word turned out to be English but a
 //diacritic was applied mid-word (the ambiguous-prefix case the keystroke-time
 //check intentionally leaves to Vietnamese, e.g. "google", "message"), restore
 //the raw keystrokes so the final word is clean. Returns true if it restored.
 static bool restoreEnglishAtBreak(const int& handleCode) {
-    if (!engDetectEnabled() || _index == 0 || !buildEngRawFromStates())
+    if (!engDetectEnabled() || _index == 0 || _engStandaloneToggle || !buildEngRawFromStates())
         return false;
     //Don't restore if the keystrokes spell a Vietnamese word, or are still a
     //valid Vietnamese prefix (e.g. "dd" -> đ): otherwise a complete-English-word
@@ -1589,7 +1605,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
 
         insertState(data, _isCaps); //save state
         
-        if (!IS_SPECIALKEY(data) || tempDisableKey || shouldTreatAsEnglish()) { //do nothing
+        if (!IS_SPECIALKEY(data) || tempDisableKey || (shouldTreatAsEnglish() && !isStandaloneToggle(data))) { //do nothing
             if (vQuickTelex && IS_QUICK_TELEX_KEY(data)) {
                 handleQuickTelex(data, _isCaps);
                 return;

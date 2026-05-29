@@ -245,16 +245,20 @@ int main() {
     printf("\n== C. English auto-detection — must NOT diacriticize ==\n");
     resetOptions();
     vAutoDetectEnglish = 1;
+    // Words starting with a non-transform letter are clean mid-word (detection
+    // fires before any diacritic). Leading-"w" words (e.g. "window") are NOT here:
+    // the first "w" becomes ư before detection can see ≥2 keystrokes, so they only
+    // clean up at the word break — see D3.
     const char* cWords[] = {
         "project", "guns", "code", "codes", "files", "string", "links",
-        "video", "password", "internet", "window", "button", "menu",
+        "video", "password", "internet", "button", "menu",
         "drive", "first", "type"
     };
     const char* cIds[] = {
         "C1","C2","C3","C4","C5","C6","C7","C8","C9","C10",
-        "C11","C12","C13","C14","C15","C16"
+        "C11","C12","C13","C14","C15"
     };
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < 15; i++)
         expectAscii(st, cIds[i], cWords[i]);
 
     printf("\n== D. Ambiguous-prefix English — cleaned at word break ==\n");
@@ -262,6 +266,7 @@ int main() {
     vAutoDetectEnglish = 1;
     expectAscii(st, "D1", "google", true);
     expectAscii(st, "D2", "message", true);
+    expectAscii(st, "D3", "window", true);   // leading "w": ư mid-word, restored at break
 
     printf("\n== E. Favor Vietnamese (English word == valid VN-by-Telex) ==\n");
     resetOptions();
