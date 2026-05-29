@@ -1437,8 +1437,12 @@ void vKeyHandleEvent(const vKeyEvent& event,
             if (tempDisableKey && !checkRestoreIfWrongSpelling(vRestoreAndStartNewSession)) {
                 hCode = vDoNothing;
             }
-        } else if (!_hasHandledMacro && isWordBreak(event, state, data) && restoreEnglishAtBreak(vRestoreAndStartNewSession)) {
-            //English word with a mid-word diacritic -> restore raw keystrokes
+        } else if (!_hasHandledMacro &&
+                   (isWordBreak(event, state, data) || (IS_NUMBER_KEY(data) && capsStatus == 1)) &&
+                   restoreEnglishAtBreak(vRestoreAndStartNewSession)) {
+            //English word with a mid-word diacritic -> restore raw keystrokes.
+            //Shifted number keys (! @ # ...) also terminate a word but aren't in
+            //the break-code set, so include them or e.g. "wow!" would not restore.
         }
 
         _isCharKeyCode = state == KeyDown && std::find(_charKeyCode.begin(), _charKeyCode.end(), data) != _charKeyCode.end();

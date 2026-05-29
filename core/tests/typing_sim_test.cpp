@@ -367,6 +367,11 @@ int main() {
         {"E-dduo","dduwowngf", "đường"},
         {"E-ddv", "ddi Vieejt Nam", "đi Việt Nam"},
         {"E-dds", "dd hocj",   "đ học"},   // bare đ at a word break must not revert
+        // Leading-w English word restores at a word break, incl. "!" (a shifted
+        // number key, which isn't in the engine's break-code set).
+        {"E-wow1", "wow ok",  "wow ok"},
+        {"E-wow2", "wow!",    "wow!"},
+        {"E-wow3", "wow.",    "wow."},
     };
     for (auto& c : english) run(st, c);
     vAutoDetectEnglish = 0;
