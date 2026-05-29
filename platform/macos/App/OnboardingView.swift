@@ -17,8 +17,8 @@ struct OnboardingView: View {
                     .font(.system(size: 34))
                     .foregroundStyle(.tint)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Welcome to 84Key").font(.title2).bold()
-                    Text("Vietnamese typing for macOS")
+                    Text("Chào mừng đến với 84Key").font(.title2).bold()
+                    Text("Bộ gõ tiếng Việt cho macOS")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
             }
@@ -26,23 +26,23 @@ struct OnboardingView: View {
             Divider()
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("84Key needs Accessibility permission to process keyboard input.")
+                Text("84Key cần quyền Trợ năng (Accessibility) để xử lý bàn phím.")
                     .font(.headline)
-                Text("To place Vietnamese diacritics, 84Key reads and replaces the text in the field you are typing in. macOS requires Accessibility permission for this kind of input handling. 84Key does not send your text anywhere.")
+                Text("Để đặt dấu tiếng Việt, 84Key đọc và thay thế văn bản trong ô bạn đang gõ. macOS yêu cầu quyền Trợ năng (Accessibility) cho kiểu xử lý nhập liệu này. 84Key không gửi văn bản của bạn đi đâu cả.")
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             GroupBox {
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("Two steps", systemImage: "list.number")
+                    Label("Hai bước", systemImage: "list.number")
                         .font(.subheadline).bold()
-                    Text("1. Click “Open Accessibility Settings” and enable 84Key.\n2. Click “Restart 84Key” so it picks up the new permission. (Development builds need this; a signed release will not.)")
+                    Text("1. Bấm “Mở cài đặt Trợ năng” và bật 84Key.\n2. Bấm “Khởi động lại 84Key” để áp dụng quyền mới. (Bản dựng phát triển cần bước này; bản phát hành đã ký thì không.)")
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Label("Turn off other Vietnamese input methods", systemImage: "exclamationmark.triangle")
+                    Label("Tắt các bộ gõ tiếng Việt khác", systemImage: "exclamationmark.triangle")
                         .font(.subheadline).bold()
-                    Text("OpenKey, EVKey, or the built-in macOS Vietnamese source running at the same time cause duplicated or garbled characters.")
+                    Text("OpenKey, EVKey, hoặc bộ gõ tiếng Việt tích hợp sẵn của macOS chạy cùng lúc sẽ gây lặp ký tự hoặc sai chữ.")
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -52,15 +52,15 @@ struct OnboardingView: View {
 
             HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
-                Text("Waiting for permission… 84Key starts automatically once it takes effect.")
+                Text("Đang chờ cấp quyền… 84Key sẽ tự khởi động ngay khi quyền có hiệu lực.")
                     .font(.caption).foregroundStyle(.secondary)
             }
 
             HStack {
-                Button("Later", action: onSkip)
+                Button("Để sau", action: onSkip)
                 Spacer()
-                Button("Restart 84Key", action: onRelaunch)
-                Button("Open Accessibility Settings", action: onOpenSettings)
+                Button("Khởi động lại 84Key", action: onRelaunch)
+                Button("Mở cài đặt Trợ năng", action: onOpenSettings)
                     .keyboardShortcut(.defaultAction)
             }
         }
@@ -99,7 +99,7 @@ final class OnboardingController: NSObject, NSWindowDelegate {
                 defer: false
             )
             win.contentViewController = hosting
-            win.title = "Welcome to 84Key"
+            win.title = "Chào mừng đến với 84Key"
             win.isReleasedWhenClosed = false
             win.delegate = self
             win.center()

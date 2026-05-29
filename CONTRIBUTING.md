@@ -65,6 +65,25 @@ Example: `fix(core): correct tone placement for "qu" and "gi" clusters`.
   should keep their original formatting and structure so that upstream changes
   remain easy to track and diffs stay minimal. Make only the changes needed.
 
+## Language conventions
+
+84Key targets Vietnamese-speaking users, so anything an end user reads is in
+**Vietnamese**, while everything developers work with internally stays in
+**English** (easier collaboration, and consistent with the GPLv3 OpenKey
+upstream).
+
+- **Use English for**: all source code and identifiers; code comments and doc
+  comments; internal docs (`docs/*.md`, this file, `SECURITY.md`,
+  `CODE_OF_CONDUCT.md`, GitHub issue/PR templates); commit messages; and
+  developer-facing logs (`NSLog`, debug output — these are diagnostics, not UI).
+- **Use Vietnamese for**: every user-facing UI string in the apps (macOS now;
+  Windows/Linux later) — `Text`, `Toggle`, `Picker`, `Section`, `Button`,
+  `Label`, `LabeledContent` labels, window titles, menu-bar items, onboarding
+  copy — and `README.md` (keep it bilingual, **Vietnamese first**).
+- **Keep as-is (do not translate)**: the brand name **84Key**; technical names
+  and standards (Telex, VNI, Unicode, TCVN3, CP1258, Spotlight, Accessibility /
+  CGEvent API); and the menu-bar language indicator labels **"VI"** / **"EN"**.
+
 ## Filing issues
 
 Open an issue on GitHub. For bug reports, please include:
