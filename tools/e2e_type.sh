@@ -17,10 +17,12 @@
 #   bash tools/e2e_type.sh                 # types a default set of cases
 #   bash tools/e2e_type.sh "dd ddi tieesng vieejt nguwowif"
 #
-# Compare the printed output to the expected Vietnamese. For a per-keystroke
-# engine trace, instead run the app binary directly with KEY84_TRACE=1:
-#   KEY84_TRACE=1 build/dd/Build/Products/Release/84Key.app/Contents/MacOS/84Key
-# then type and read the trace in Console.app (or stderr).
+# Notes:
+#   * It clicks the TextEdit text area first — this both focuses it (so the keys
+#     land) and sends a mouse event that resets the engine's word session, so
+#     each run starts clean.
+#   * For a per-keystroke engine trace, run the app binary with KEY84_TRACE=1:
+#       KEY84_TRACE=1 build/dd/Build/Products/Release/84Key.app/Contents/MacOS/84Key
 set -e
 
 KEYS="${1:-dd ddi tieesng vieejt truwowngf nguwowif ddoongf quawngr}"
@@ -29,11 +31,17 @@ osascript <<OSA
 tell application "TextEdit"
     activate
     if (count of documents) = 0 then make new document
-    set text of document 1 to ""
+    set text of front document to ""
 end tell
 delay 0.6
+tell application "System Events" to tell process "TextEdit"
+    set frontmost to true
+    set p to position of window 1
+    set s to size of window 1
+    click at {(item 1 of p) + (item 1 of s) / 2, (item 2 of p) + (item 2 of s) / 2}
+end tell
+delay 0.3
 tell application "System Events" to keystroke "$KEYS"
-delay 0.6
-set result to text of document 1 of application "TextEdit"
-return result
+delay 0.7
+return (text of front document of application "TextEdit")
 OSA
