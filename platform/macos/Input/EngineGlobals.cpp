@@ -17,7 +17,10 @@ int vCheckSpelling = 1;
 int vUseModernOrthography = 1;
 int vQuickTelex = 0;
 int vRestoreIfWrongSpelling = 0;
-int vFixRecommendBrowser = 1;
+// Off by default: this injects an invisible "empty char" + extra backspace on
+// every transform to defeat browser autocomplete, which can leave stray
+// characters in ordinary text fields. Opt-in via Settings if needed.
+int vFixRecommendBrowser = 0;
 int vUseMacro = 0;
 int vUseMacroInEnglishMode = 0;
 int vAutoCapsMacro = 0;
@@ -28,7 +31,10 @@ int vAllowConsonantZFWJ = 0;
 int vQuickStartConsonant = 0;
 int vQuickEndConsonant = 0;
 int vRememberCode = 0;
-int vOtherLanguage = 1;
+// Off by default: when ON, 84Key disables itself whenever the macOS keyboard
+// input source isn't reported as English — which silently breaks typing for
+// users who keep a Vietnamese (or other) macOS layout. Opt-in via Settings.
+int vOtherLanguage = 0;
 int vTempOffOpenKey = 0;
 // Flagship: automatic English detection defaults ON (see PROGRESS / SPEC).
 int vAutoDetectEnglish = 1;

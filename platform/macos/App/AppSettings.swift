@@ -22,7 +22,7 @@ final class AppSettings: ObservableObject {
         "vUseModernOrthography": 1,
         "vQuickTelex": 0,
         "vRestoreIfWrongSpelling": 0,
-        "vFixRecommendBrowser": 1,
+        "vFixRecommendBrowser": 0,      // off: avoids stray chars in normal fields
         "vUseMacro": 0,
         "vUseSmartSwitchKey": 1,
         "vUpperCaseFirstChar": 0,
@@ -30,7 +30,7 @@ final class AppSettings: ObservableObject {
         "vQuickStartConsonant": 0,
         "vQuickEndConsonant": 0,
         "vAutoDetectEnglish": 1,        // flagship: default ON
-        "vOtherLanguage": 1,
+        "vOtherLanguage": 0,            // off: don't disable on non-en macOS layouts
         "vFixSpotlight": 1,             // default ON — the registerDefaults gotcha
         "vSendKeyStepByStep": 0,
         "vFixChromiumBrowser": 0,

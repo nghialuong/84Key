@@ -639,6 +639,15 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                         gKeycode,
                         gFlag & kCGEventFlagMaskShift ? 1 : (gFlag & kCGEventFlagMaskAlphaShift ? 2 : 0),
                         OTHER_CONTROL_KEY);
+        // Opt-in diagnostic trace: run the binary with KEY84_TRACE=1 to log what
+        // the engine decided per keystroke (for diagnosing live-app issues).
+        static bool gTrace = (getenv("KEY84_TRACE") != NULL);
+        if (gTrace) {
+            NSLog(@"84Key[trace] kc=%d code=%d bsp=%d ncc=%d ext=%d vCT=%d fixRec=%d other=%d",
+                  (int)gKeycode, (int)pData->code, (int)pData->backspaceCount,
+                  (int)pData->newCharCount, (int)pData->extCode, vCodeTable,
+                  vFixRecommendBrowser, vOtherLanguage);
+        }
         if (pData->code == vDoNothing) { // do nothing
             if (IS_DOUBLE_CODE(vCodeTable)) { // VNI
                 if (pData->extCode == 1) { // break key
