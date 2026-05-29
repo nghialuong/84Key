@@ -1,15 +1,22 @@
 #!/bin/bash
 #
-# package.sh — build a runnable 84Key.app and a .dmg for local distribution.
+# package.sh — build 84Key.app and a .dmg, and (optionally) notarize the .dmg so
+# it opens cleanly on other Macs.
 #
 # Signing:
-#   - By default the app is ad-hoc signed (CODE_SIGNING_ALLOWED=NO). It runs
-#     locally after you approve it in System Settings > Privacy & Security.
-#   - For a Developer ID signed build, set CODESIGN_IDENTITY to your identity,
-#     e.g.  CODESIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)"
+#   - Auto-detects a stable signing identity (Developer ID preferred, else Apple
+#     Development). Override with CODESIGN_IDENTITY. A stable identity keeps the
+#     macOS Accessibility/TCC grant valid across rebuilds.
+#   - Falls back to ad-hoc if no identity is found (local use only).
 #
-# Notarization requires an Apple Developer account and is NOT done here — see the
-# note printed at the end.
+# Notarization (to share with others):
+#   1. One-time, create a notarytool keychain profile (you enter your Apple ID and
+#      an app-specific password from appleid.apple.com):
+#        xcrun notarytool store-credentials "84key-notary" \
+#            --apple-id "you@example.com" --team-id "TAFDRXJZSR"
+#   2. Build + notarize + staple:
+#        KEY84_NOTARY_PROFILE=84key-notary bash tools/package.sh
+#   The resulting build/84Key.dmg opens normally on any Mac (no Gatekeeper warning).
 #
 set -euo pipefail
 
@@ -18,13 +25,11 @@ MACOS="$ROOT/platform/macos"
 BUILD="$ROOT/build"
 CONFIG="${CONFIG:-Release}"
 APP_NAME="84Key"
+NOTARY_PROFILE="${KEY84_NOTARY_PROFILE:-}"   # notarytool keychain profile; set to notarize
 
 echo "==> Generating Xcode project (XcodeGen)"
 ( cd "$MACOS" && xcodegen generate >/dev/null )
 
-# Pick a stable signing identity if none was given. A stable identity (Developer
-# ID / Apple Development) keeps macOS Accessibility/TCC grants valid across
-# rebuilds — ad-hoc signatures change every build and lose the grant.
 if [ -z "${CODESIGN_IDENTITY:-}" ]; then
   CODESIGN_IDENTITY="$(security find-identity -v -p codesigning 2>/dev/null \
       | awk -F'"' '/Developer ID Application/{print $2; exit}')"
@@ -32,28 +37,26 @@ if [ -z "${CODESIGN_IDENTITY:-}" ]; then
       | awk -F'"' '/Apple Development/{print $2; exit}')"
 fi
 
+# Notarization requires a secure (online) timestamp; skip it otherwise for speed.
+TS="--timestamp=none"
+[ -n "$NOTARY_PROFILE" ] && TS="--timestamp"
+
 echo "==> Building $CONFIG"
 rm -rf "$BUILD"
 mkdir -p "$BUILD"
-# Build ad-hoc (reliable, no provisioning needed), then re-sign with the stable
-# identity below if we have one.
 xcodebuild -project "$MACOS/$APP_NAME.xcodeproj" -scheme "$APP_NAME" \
   -configuration "$CONFIG" -derivedDataPath "$BUILD/dd" \
   CODE_SIGNING_ALLOWED=NO \
   build >/dev/null
 
 APP="$BUILD/dd/Build/Products/$CONFIG/$APP_NAME.app"
-if [ ! -d "$APP" ]; then
-  echo "ERROR: build did not produce $APP" >&2
-  exit 1
-fi
+[ -d "$APP" ] || { echo "ERROR: build did not produce $APP" >&2; exit 1; }
 
 if [ -n "$CODESIGN_IDENTITY" ]; then
-  echo "==> Re-signing with: $CODESIGN_IDENTITY"
-  codesign --force --deep --options runtime --timestamp=none -s "$CODESIGN_IDENTITY" "$APP"
+  echo "==> Re-signing app with: $CODESIGN_IDENTITY"
+  codesign --force --deep --options runtime $TS -s "$CODESIGN_IDENTITY" "$APP"
 else
-  echo "    (ad-hoc signed — no Developer ID/Apple Development identity found;"
-  echo "     macOS will require re-granting Accessibility after each rebuild)"
+  echo "    (ad-hoc signed — no Developer ID/Apple Development identity found)"
 fi
 
 echo "==> Staging app and building DMG"
@@ -66,22 +69,29 @@ DMG="$BUILD/$APP_NAME.dmg"
 rm -f "$DMG"
 hdiutil create -volname "$APP_NAME" -srcfolder "$DIST" -ov -format UDZO "$DMG" >/dev/null
 
+if [ -n "$CODESIGN_IDENTITY" ]; then
+  codesign --force $TS -s "$CODESIGN_IDENTITY" "$DMG"
+fi
+
 echo ""
-echo "==> Done"
+echo "==> Built"
 echo "    App: $APP"
 echo "    DMG: $DMG"
-echo ""
-if [ -z "${CODESIGN_IDENTITY:-}" ]; then
-  cat <<'NOTE'
-NOTE: This is an ad-hoc signed (unnotarized) build. macOS Gatekeeper will warn on
-first launch — approve it in System Settings > Privacy & Security ("Open Anyway").
-84Key also needs Accessibility permission (it will prompt on first run).
 
-For a distributable, notarized build you need an Apple Developer account:
-  1. Build with CODESIGN_IDENTITY set to your "Developer ID Application" identity.
-  2. Notarize the .dmg:  xcrun notarytool submit build/84Key.dmg \
-       --apple-id <id> --team-id <TEAMID> --password <app-specific-pw> --wait
-  3. Staple:            xcrun stapler staple build/84Key.dmg
-ACTION REQUIRED: set up the Apple Developer account before public distribution.
+if [ -n "$NOTARY_PROFILE" ]; then
+  echo ""
+  echo "==> Notarizing (profile: $NOTARY_PROFILE) — this can take a few minutes"
+  xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
+  echo "==> Stapling"
+  xcrun stapler staple "$DMG"
+  xcrun stapler validate "$DMG"
+  echo "==> Notarized DMG ready to share: $DMG"
+else
+  cat <<'NOTE'
+
+NOTE: Not notarized — Gatekeeper will warn on other Macs (open via right-click >
+Open, or System Settings > Privacy & Security > Open Anyway).
+To produce a share-ready notarized DMG, create a notarytool keychain profile once
+(see the header of this script) and re-run with KEY84_NOTARY_PROFILE set.
 NOTE
 fi
