@@ -26,9 +26,11 @@ enum LoginItemManager {
                     try service.register()
                 }
             } else {
-                // .notRegistered is the resting state for "off"; anything else
-                // (enabled / requiresApproval) should be torn down.
-                if service.status != .notRegistered {
+                // Only tear down when actually enabled. Trying to unregister a
+                // not-registered / requires-approval service (common for an
+                // ad-hoc dev build not in /Applications) errors with "not
+                // permitted", so skip it.
+                if service.status == .enabled {
                     try service.unregister()
                 }
             }

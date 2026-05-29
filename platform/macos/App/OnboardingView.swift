@@ -65,7 +65,7 @@ struct OnboardingView: View {
             }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(width: 460, height: 460, alignment: .topLeading)
     }
 }
 
@@ -101,9 +101,20 @@ final class OnboardingController: NSObject, NSWindowDelegate {
                 onSkip: { [weak self] in self?.dismiss() }
             )
             let hosting = NSHostingController(rootView: view)
-            let win = NSWindow(contentViewController: hosting)
+            // Do NOT let SwiftUI drive the window size: with a flexible-height
+            // root, NSHostingController keeps re-proposing the window size, which
+            // ping-pongs the window's "Update Constraints" pass until AppKit
+            // throws NSGenericException and the app crashes. Fix the window to the
+            // view's size and disable hosting auto-sizing instead.
+            hosting.sizingOptions = []
+            let win = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 460, height: 460),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            win.contentViewController = hosting
             win.title = "Welcome to 84Key"
-            win.styleMask = [.titled, .closable, .miniaturizable]
             win.isReleasedWhenClosed = false
             win.delegate = self
             win.center()
