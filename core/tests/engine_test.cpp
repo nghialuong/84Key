@@ -287,6 +287,17 @@ int main() {
     expectAscii(st, "E8", "class", true);
     expectAscii(st, "E9", "issue", true);     // English word with "iss" prefix stays whole
     expectAscii(st, "E10", "assign", true);
+    // Tone-first Telex order: "ít" can be typed i-t-s OR i-s-t. The tone-first
+    // raw string "ist" is an English word and isn't the canonical viet spelling
+    // "its", but it's still Vietnamese — it must not be restored at the break.
+    expectEq(st, "E11", "ist ", "ít ");
+    expectEq(st, "E12", "its ", "ít ");        // canonical order, also Vietnamese
+    expectEq(st, "E13", "ast ", "át ");        // same class, a-s-t
+    expectEq(st, "E14", "ust ", "út ");
+    // ...but a real English word whose canonical tone-last form is NOT English
+    // must still restore: "test" stays "test" (the Vietnamese "tét" is "tets").
+    expectAscii(st, "E15", "test", true);
+    expectAscii(st, "E16", "last", true);
 
     printf("\n== F. Option OFF = identical legacy behavior ==\n");
     resetOptions();

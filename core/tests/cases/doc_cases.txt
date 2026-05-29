@@ -11,6 +11,9 @@ password => password
 internet => internet
 you can download the server side files => you can download the server side files
 search the database then type your query => search the database then type your query
+# Tone-first Telex order at a word break: "ít" typed i-s-t must stay Vietnamese,
+# not revert to the English word "ist" (regression).
+an ist com => an ít com
 @detect=off
 
 # --- Valid Vietnamese syllables & words (round-trip: reverse-encoded & retyped)

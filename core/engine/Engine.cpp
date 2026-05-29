@@ -1394,6 +1394,43 @@ static bool isStandaloneToggle(const Uint16& data) {
            CHR(_index - 1) == KEY_U && (TypingWord[_index - 1] & TONEW_MASK);
 }
 
+//Telex lets the tone key sit anywhere after the vowel: "ít" can be typed
+//i-t-s OR i-s-t. The Vietnamese dictionary only stores the canonical tone-last
+//spelling ("its"), so a tone-first raw string ("ist") slips past the viet
+//guards in restoreEnglishAtBreak — and since it happens to be an English word
+//("ist"), the valid Vietnamese word would be wrongly restored. Rebuild the
+//canonical spelling by moving the applied tone key to the end.
+//
+//We only override the English restore when that canonical spelling is ITSELF
+//both a Vietnamese word and an English word (e.g. "its" = ít): typing it in
+//canonical order already resolves to Vietnamese (the "favor Vietnamese" rule),
+//so the tone-first variant must too. This deliberately leaves genuine English
+//like "test" alone — its canonical form "tets" is not an English word, so
+//"test" stays a distinct English token (the Vietnamese "tét" is typed "tets").
+//Only fires when a tone mark was actually applied (toneless English like
+//"google" is untouched).
+static bool rawToneReorderIsViet() {
+    Uint32 markMask = 0;
+    for (i = 0; i < _index; i++) {
+        if (TypingWord[i] & MARK_MASK) { markMask = TypingWord[i] & MARK_MASK; break; }
+    }
+    if (!markMask)
+        return false;
+    Uint16 toneKey = markMask == MARK1_MASK ? KEY_S : markMask == MARK2_MASK ? KEY_F :
+                     markMask == MARK3_MASK ? KEY_R : markMask == MARK4_MASK ? KEY_X :
+                     markMask == MARK5_MASK ? KEY_J : 0;
+    char toneChar = toneKey ? engKeyToChar(toneKey) : 0;
+    if (!toneChar)
+        return false;
+    string w = _engRawWord;
+    size_t pos = w.rfind(toneChar);
+    if (pos == string::npos || pos == w.size() - 1) //missing, or already tone-last
+        return false;
+    w.erase(pos, 1);
+    w.push_back(toneChar);
+    return isEnglishWord(w) && (isVietByTelex(w) || isVietByTelexPrefix(w));
+}
+
 //At a word boundary, if the whole typed word turned out to be English but a
 //diacritic was applied mid-word (the ambiguous-prefix case the keystroke-time
 //check intentionally leaves to Vietnamese, e.g. "google", "message"), restore
@@ -1404,7 +1441,9 @@ static bool restoreEnglishAtBreak(const int& handleCode) {
     //Don't restore if the keystrokes spell a Vietnamese word, or are still a
     //valid Vietnamese prefix (e.g. "dd" -> đ): otherwise a complete-English-word
     //digraph like "dd" would be reverted at the break, undoing the diacritic.
-    if (!isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord))
+    //rawToneReorderIsViet() covers tone-first spellings ("ist" of "ít").
+    if (!isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord)
+        || rawToneReorderIsViet())
         return false;
 
     //Only act if the current on-screen word actually differs from the raw keys.
