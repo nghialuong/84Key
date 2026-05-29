@@ -12,6 +12,7 @@
 		38584869C1388E5ECB009D3D /* InputController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 76D6397CA6F9E5BE642D9381 /* InputController.mm */; };
 		394BD58B1FA7E0B74E09D94D /* EnglishDetect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 346834B1FB4582BDFFD78C95 /* EnglishDetect.cpp */; };
 		543DBE4F6172DDE24CCC7B71 /* ConvertTool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 347D482A1778708F877ABB7D /* ConvertTool.cpp */; };
+		5499C2FF468494F47AC1F930 /* AppController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AE3B922AED954F8DF4AA548 /* AppController.swift */; };
 		5ABED8A7FDA6CF03D831D186 /* EngineGlobals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2EC8E0C2A29EBDA375D5EFBE /* EngineGlobals.cpp */; };
 		5EFBB549AC873A5B611E7DFC /* Engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C921456CE8030DD3617E34E8 /* Engine.cpp */; };
 		6201415A13C08077BFBFDC20 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B32E1258BBD63E72651EF8 /* OnboardingView.swift */; };
@@ -48,6 +49,7 @@
 		72B32E1258BBD63E72651EF8 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		76D6397CA6F9E5BE642D9381 /* InputController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = InputController.mm; sourceTree = "<group>"; };
 		80D1CD70559CFEEAA46701D7 /* win32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = win32.h; sourceTree = "<group>"; };
+		8AE3B922AED954F8DF4AA548 /* AppController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppController.swift; sourceTree = "<group>"; };
 		9983066B472363CAAF6C02F1 /* mac.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mac.h; sourceTree = "<group>"; };
 		C510AB2E4A5D306BA3754A41 /* SmartSwitchKey.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SmartSwitchKey.cpp; sourceTree = "<group>"; };
 		C871FA1E7555C8E26448386F /* linux.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = linux.h; sourceTree = "<group>"; };
@@ -166,6 +168,7 @@
 		E4F9ACCB5402ECADF18F9F96 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				8AE3B922AED954F8DF4AA548 /* AppController.swift */,
 				0467AC75FAAB4925903F244A /* AppDelegate.swift */,
 				E8D20EA8AB5DCF6FC9132CDA /* AppSettings.swift */,
 				DBF8323C28336218318DCF13 /* Key84App.swift */,
@@ -262,6 +265,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5499C2FF468494F47AC1F930 /* AppController.swift in Sources */,
 				24482B6F1C2BDD94A2A8B5BB /* AppDelegate.swift in Sources */,
 				D9ED14F5CAF2F8D4ACD4F64D /* AppSettings.swift in Sources */,
 				543DBE4F6172DDE24CCC7B71 /* ConvertTool.cpp in Sources */,

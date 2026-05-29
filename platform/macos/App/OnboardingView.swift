@@ -1,15 +1,13 @@
 import SwiftUI
 import AppKit
 
-/// First-run onboarding shown when Accessibility permission is missing. 84Key is
-/// a menu-bar agent (LSUIElement), so there is no main window scene; this is
-/// presented imperatively through `OnboardingController`, which owns the NSWindow
-/// and polls for the granted permission.
+/// First-run onboarding shown when 84Key cannot yet process typing (Accessibility
+/// permission missing or not yet effective). 84Key is a menu-bar agent
+/// (LSUIElement), so this is presented imperatively by `OnboardingController`.
+/// `AppController` polls in the background and dismisses it once the tap starts.
 struct OnboardingView: View {
-    /// Called when the user asks to open Accessibility settings (triggers the
-    /// system prompt and/or opens the Privacy pane).
     let onOpenSettings: () -> Void
-    /// Lets the user dismiss the window without granting now.
+    let onRelaunch: () -> Void
     let onSkip: () -> Void
 
     var body: some View {
@@ -19,11 +17,9 @@ struct OnboardingView: View {
                     .font(.system(size: 34))
                     .foregroundStyle(.tint)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Welcome to 84Key")
-                        .font(.title2).bold()
+                    Text("Welcome to 84Key").font(.title2).bold()
                     Text("Vietnamese typing for macOS")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(.subheadline).foregroundStyle(.secondary)
                 }
             }
 
@@ -39,11 +35,15 @@ struct OnboardingView: View {
 
             GroupBox {
                 VStack(alignment: .leading, spacing: 6) {
+                    Label("Two steps", systemImage: "list.number")
+                        .font(.subheadline).bold()
+                    Text("1. Click “Open Accessibility Settings” and enable 84Key.\n2. Click “Restart 84Key” so it picks up the new permission. (Development builds need this; a signed release will not.)")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Label("Turn off other Vietnamese input methods", systemImage: "exclamationmark.triangle")
                         .font(.subheadline).bold()
-                    Text("Running 84Key alongside OpenKey, EVKey, or the built-in macOS Vietnamese input source causes duplicated or garbled characters. Please disable the others before typing.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    Text("OpenKey, EVKey, or the built-in macOS Vietnamese source running at the same time cause duplicated or garbled characters.")
+                        .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -52,63 +52,48 @@ struct OnboardingView: View {
 
             HStack(spacing: 10) {
                 ProgressView().controlSize(.small)
-                Text("Waiting for permission… 84Key starts automatically once granted.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text("Waiting for permission… 84Key starts automatically once it takes effect.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             HStack {
                 Button("Later", action: onSkip)
                 Spacer()
+                Button("Restart 84Key", action: onRelaunch)
                 Button("Open Accessibility Settings", action: onOpenSettings)
                     .keyboardShortcut(.defaultAction)
             }
         }
         .padding(24)
-        .frame(width: 460, height: 460, alignment: .topLeading)
+        .frame(width: 480, height: 520, alignment: .topLeading)
     }
 }
 
-/// Owns the onboarding NSWindow, the permission poll timer, and the hand-off to
-/// start the event tap. Created and retained by `AppDelegate`.
+/// Owns the onboarding NSWindow. Polling/permission logic lives in AppController.
 @MainActor
 final class OnboardingController: NSObject, NSWindowDelegate {
-    private let input: InputController
-    /// Invoked (on the main actor) when permission is detected so the app can
-    /// start the tap. Returns whether the tap actually started.
-    private let onGranted: () -> Void
-
+    private weak var app: AppController?
     private var window: NSWindow?
-    private var pollTimer: Timer?
 
-    init(input: InputController, onGranted: @escaping () -> Void) {
-        self.input = input
-        self.onGranted = onGranted
+    init(controller: AppController) {
+        self.app = controller
         super.init()
     }
 
-    /// Show the onboarding window and begin polling for permission.
     func present() {
-        if input.hasAccessibilityPermission() {
-            // Nothing to onboard; let the caller start immediately.
-            onGranted()
-            return
-        }
-
         if window == nil {
             let view = OnboardingView(
-                onOpenSettings: { [weak self] in self?.openAccessibilitySettings() },
+                onOpenSettings: { [weak self] in self?.app?.openAccessibilitySettings() },
+                onRelaunch: { [weak self] in self?.app?.relaunch() },
                 onSkip: { [weak self] in self?.dismiss() }
             )
             let hosting = NSHostingController(rootView: view)
-            // Do NOT let SwiftUI drive the window size: with a flexible-height
-            // root, NSHostingController keeps re-proposing the window size, which
-            // ping-pongs the window's "Update Constraints" pass until AppKit
-            // throws NSGenericException and the app crashes. Fix the window to the
-            // view's size and disable hosting auto-sizing instead.
+            // Don't let SwiftUI drive the window size (a flexible-height root makes
+            // NSHostingController ping-pong the Update Constraints pass until AppKit
+            // throws and the app crashes). Fix the window size instead.
             hosting.sizingOptions = []
             let win = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 460, height: 460),
+                contentRect: NSRect(x: 0, y: 0, width: 480, height: 520),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
@@ -120,55 +105,19 @@ final class OnboardingController: NSObject, NSWindowDelegate {
             win.center()
             window = win
         }
-
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window?.makeKeyAndOrderFront(nil)
-
-        startPolling()
     }
 
-    private func openAccessibilitySettings() {
-        // Surfaces the system "open System Settings" prompt for our app.
-        _ = input.requestAccessibilityPermission()
-        // Also deep-link to the Accessibility privacy pane as a fallback.
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            NSWorkspace.shared.open(url)
-        }
-    }
-
-    private func startPolling() {
-        pollTimer?.invalidate()
-        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            // Timer fires on the main run loop; hop to the main actor for the
-            // permission check and UI/tap mutation.
-            Task { @MainActor in self?.checkPermission() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        pollTimer = timer
-    }
-
-    private func checkPermission() {
-        guard input.hasAccessibilityPermission() else { return }
-        onGranted()
-        dismiss()
-    }
-
-    /// Close the window, stop polling, and restore agent (no-Dock) activation.
     func dismiss() {
-        pollTimer?.invalidate()
-        pollTimer = nil
         window?.orderOut(nil)
         window?.delegate = nil
         window = nil
-        // Return to accessory so the app stays a pure menu-bar agent.
         NSApp.setActivationPolicy(.accessory)
     }
 
-    // User closed the window with the title-bar control.
     func windowWillClose(_ notification: Notification) {
-        pollTimer?.invalidate()
-        pollTimer = nil
         NSApp.setActivationPolicy(.accessory)
     }
 }
