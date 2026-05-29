@@ -1,0 +1,10 @@
+# Round-trip mode: paste CORRECT Vietnamese below @roundtrip. The harness derives
+# the Telex keystrokes that produce each line, types them, and verifies the result
+# equals the original. No need to write Telex keys yourself.
+@roundtrip
+Tôi đang học gõ tiếng Việt.
+Hà Nội là thủ đô của nước Việt Nam.
+Phở bò tái rất ngon.
+Chúng ta đi chơi vào ngày mai nhé.
+Lập trình viên viết mã nguồn mở.
+Cộng hòa xã hội chủ nghĩa Việt Nam.

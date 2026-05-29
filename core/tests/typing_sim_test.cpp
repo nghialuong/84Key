@@ -19,6 +19,7 @@
 #include <vector>
 #include <algorithm>
 #include <dirent.h>
+#include <map>
 
 #include "../engine/Engine.h"
 #include "../engine/EnglishDetect.h"
@@ -36,7 +37,12 @@ int vUseSmartSwitchKey = 0, vUpperCaseFirstChar = 0, vTempOffSpelling = 0, vAllo
 int vQuickStartConsonant = 0, vQuickEndConsonant = 0, vRememberCode = 0, vOtherLanguage = 0;
 int vTempOffOpenKey = 0, vAutoDetectEnglish = 0;
 
-static int charToKey(char c) {
+// ASCII char -> engine keycode; sets `caps` when Shift is needed. Covers letters,
+// digits, space and common punctuation (so article round-trips can be typed).
+static int asciiToKey(char ch, bool& caps) {
+    caps = false;
+    unsigned char c = (unsigned char)ch;
+    if (c >= 'A' && c <= 'Z') { caps = true; c = (unsigned char)(c - 'A' + 'a'); }
     switch (c) {
         case 'a': return KEY_A; case 'b': return KEY_B; case 'c': return KEY_C; case 'd': return KEY_D;
         case 'e': return KEY_E; case 'f': return KEY_F; case 'g': return KEY_G; case 'h': return KEY_H;
@@ -48,6 +54,19 @@ static int charToKey(char c) {
         case '0': return KEY_0; case '1': return KEY_1; case '2': return KEY_2; case '3': return KEY_3;
         case '4': return KEY_4; case '5': return KEY_5; case '6': return KEY_6; case '7': return KEY_7;
         case '8': return KEY_8; case '9': return KEY_9; case ' ': return KEY_SPACE;
+        case '`': return KEY_BACKQUOTE; case '-': return KEY_MINUS; case '=': return KEY_EQUALS;
+        case '[': return KEY_LEFT_BRACKET; case ']': return KEY_RIGHT_BRACKET; case '\\': return KEY_BACK_SLASH;
+        case ';': return KEY_SEMICOLON; case '\'': return KEY_QUOTE; case ',': return KEY_COMMA;
+        case '.': return KEY_DOT; case '/': return KEY_SLASH;
+        case '~': caps = true; return KEY_BACKQUOTE; case '!': caps = true; return KEY_1;
+        case '@': caps = true; return KEY_2; case '#': caps = true; return KEY_3; case '$': caps = true; return KEY_4;
+        case '%': caps = true; return KEY_5; case '^': caps = true; return KEY_6; case '&': caps = true; return KEY_7;
+        case '*': caps = true; return KEY_8; case '(': caps = true; return KEY_9; case ')': caps = true; return KEY_0;
+        case '_': caps = true; return KEY_MINUS; case '+': caps = true; return KEY_EQUALS;
+        case '{': caps = true; return KEY_LEFT_BRACKET; case '}': caps = true; return KEY_RIGHT_BRACKET;
+        case '|': caps = true; return KEY_BACK_SLASH; case ':': caps = true; return KEY_SEMICOLON;
+        case '"': caps = true; return KEY_QUOTE; case '<': caps = true; return KEY_COMMA;
+        case '>': caps = true; return KEY_DOT; case '?': caps = true; return KEY_SLASH;
         default: return -1;
     }
 }
@@ -89,9 +108,9 @@ static u32string typeFresh(vKeyHookState* st, const string& keys) {
     vKeyInit();
     u32string buf;
     for (char ch : keys) {
-        bool caps = (ch >= 'A' && ch <= 'Z');
-        char lo = caps ? (char)(ch - 'A' + 'a') : ch;
-        int kc = charToKey(lo);
+        bool caps = false;
+        int kc = asciiToKey(ch, caps);
+        if (kc < 0) continue; // unsupported character
         vKeyHandleEvent(vKeyEvent::Keyboard, vKeyEventState::KeyDown, (Uint16)kc, caps ? 1 : 0, false);
         uint16_t literal = (uint16_t)(unsigned char)ch; // doNothing / restore trigger
         applyAppOutput(buf, st, literal);
@@ -109,7 +128,8 @@ static string toUtf8(const u32string& s) {
     return o;
 }
 
-static int g_pass = 0, g_fail = 0;
+static int g_pass = 0, g_fail = 0;        // gating: built-in cases + engine
+static int g_fixPass = 0, g_fixFail = 0;  // report-only: cases/*.txt fixtures
 struct Case { const char* id; const char* keys; const char* expect; };
 
 static void run(vKeyHookState* st, const Case& c) {
@@ -152,6 +172,68 @@ static void applyDirective(const string& body) {
     else if (key == "spell")  vCheckSpelling = on ? 1 : 0;
 }
 
+static u32string fromUtf8(const string& s) {
+    u32string out;
+    size_t i = 0;
+    while (i < s.size()) {
+        unsigned char c = (unsigned char)s[i];
+        char32_t cp; int n;
+        if (c < 0x80) { cp = c; n = 1; }
+        else if ((c >> 5) == 0x6) { cp = c & 0x1F; n = 2; }
+        else if ((c >> 4) == 0xE) { cp = c & 0x0F; n = 3; }
+        else if ((c >> 3) == 0x1E) { cp = c & 0x07; n = 4; }
+        else { cp = 0xFFFD; n = 1; }
+        for (int k = 1; k < n && i + k < s.size(); k++) cp = (cp << 6) | ((unsigned char)s[i + k] & 0x3F);
+        out.push_back(cp);
+        i += n;
+    }
+    return out;
+}
+
+// Reverse of the engine: turn a precomposed Vietnamese string into the Telex
+// keystrokes that produce it. Diacritic letters map to base + tone key (the tone
+// key right after the vowel, which Telex accepts); ASCII passes through. Used by
+// @roundtrip fixtures so you can paste correct Vietnamese and have it re-typed.
+static const std::map<char32_t, string>& vietToTelexMap() {
+    static std::map<char32_t, string> m;
+    if (!m.empty()) return m;
+    static const char* tone[6] = {"", "s", "f", "r", "x", "j"}; // none,sắc,huyền,hỏi,ngã,nặng
+    struct Row { const char* lo; const char* up; char32_t loCp[6]; char32_t upCp[6]; };
+    static const Row rows[] = {
+        {"a","A",  {0x61,0xE1,0xE0,0x1EA3,0xE3,0x1EA1},   {0x41,0xC1,0xC0,0x1EA2,0xC3,0x1EA0}},
+        {"aw","Aw",{0x103,0x1EAF,0x1EB1,0x1EB3,0x1EB5,0x1EB7},{0x102,0x1EAE,0x1EB0,0x1EB2,0x1EB4,0x1EB6}},
+        {"aa","Aa",{0xE2,0x1EA5,0x1EA7,0x1EA9,0x1EAB,0x1EAD},{0xC2,0x1EA4,0x1EA6,0x1EA8,0x1EAA,0x1EAC}},
+        {"e","E",  {0x65,0xE9,0xE8,0x1EBB,0x1EBD,0x1EB9},   {0x45,0xC9,0xC8,0x1EBA,0x1EBC,0x1EB8}},
+        {"ee","Ee",{0xEA,0x1EBF,0x1EC1,0x1EC3,0x1EC5,0x1EC7},{0xCA,0x1EBE,0x1EC0,0x1EC2,0x1EC4,0x1EC6}},
+        {"i","I",  {0x69,0xED,0xEC,0x1EC9,0x129,0x1ECB},    {0x49,0xCD,0xCC,0x1EC8,0x128,0x1ECA}},
+        {"o","O",  {0x6F,0xF3,0xF2,0x1ECF,0xF5,0x1ECD},     {0x4F,0xD3,0xD2,0x1ECE,0xD5,0x1ECC}},
+        {"oo","Oo",{0xF4,0x1ED1,0x1ED3,0x1ED5,0x1ED7,0x1ED9},{0xD4,0x1ED0,0x1ED2,0x1ED4,0x1ED6,0x1ED8}},
+        {"ow","Ow",{0x1A1,0x1EDB,0x1EDD,0x1EDF,0x1EE1,0x1EE3},{0x1A0,0x1EDA,0x1EDC,0x1EDE,0x1EE0,0x1EE2}},
+        {"u","U",  {0x75,0xFA,0xF9,0x1EE7,0x169,0x1EE5},    {0x55,0xDA,0xD9,0x1EE6,0x168,0x1EE4}},
+        {"uw","Uw",{0x1B0,0x1EE9,0x1EEB,0x1EED,0x1EEF,0x1EF1},{0x1AF,0x1EE8,0x1EEA,0x1EEC,0x1EEE,0x1EF0}},
+        {"y","Y",  {0x79,0xFD,0x1EF3,0x1EF7,0x1EF9,0x1EF5}, {0x59,0xDD,0x1EF2,0x1EF6,0x1EF8,0x1EF4}},
+    };
+    for (const Row& r : rows)
+        for (int t = 0; t < 6; t++) {
+            m[r.loCp[t]] = string(r.lo) + tone[t];
+            m[r.upCp[t]] = string(r.up) + tone[t];
+        }
+    m[0x111] = "dd"; m[0x110] = "Dd"; // đ / Đ
+    return m;
+}
+
+static string vietToTelex(const u32string& s) {
+    const auto& m = vietToTelexMap();
+    string out;
+    for (char32_t c : s) {
+        auto it = m.find(c);
+        if (it != m.end()) out += it->second;
+        else if (c < 0x80) out.push_back((char)c); // ASCII passes through
+        // other (rare) codepoints are dropped
+    }
+    return out;
+}
+
 static void runFixtureFile(vKeyHookState* st, const string& path, const string& name) {
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) return;
@@ -160,6 +242,7 @@ static void runFixtureFile(vKeyHookState* st, const string& path, const string& 
     fclose(f);
 
     resetFixtureOptions();
+    bool roundtrip = false;
     int filePass = 0, fileFail = 0, lineNo = 0;
     size_t pos = 0;
     while (pos <= data.size()) {
@@ -171,21 +254,43 @@ static void runFixtureFile(vKeyHookState* st, const string& path, const string& 
         size_t a = line.find_first_not_of(" \t\r\n");
         if (a == string::npos) continue;          // blank
         if (line[a] == '#') continue;             // comment
-        if (line[a] == '@') { applyDirective(line.substr(a + 1)); continue; }
+        if (line[a] == '@') {                     // directive
+            string dk = rstripWs(line.substr(a + 1));
+            size_t ds = dk.find_first_not_of(" \t");
+            if (ds != string::npos) dk = dk.substr(ds);
+            if (dk == "roundtrip" || dk == "roundtrip=on") { roundtrip = true; vAutoDetectEnglish = 1; }
+            else if (dk == "roundtrip=off") roundtrip = false;
+            else applyDirective(line.substr(a + 1));
+            continue;
+        }
 
         string keys, expected;
-        size_t tab = line.find('\t');
-        size_t arrow = line.find(" => ");
-        if (tab != string::npos) { keys = line.substr(0, tab); expected = line.substr(tab + 1); }
-        else if (arrow != string::npos) { keys = line.substr(0, arrow); expected = line.substr(arrow + 4); }
-        else { keys = line; expected = line; }    // no delimiter: expect output == typed (English)
+        bool rt = roundtrip;
+        if (!rt) {
+            size_t tab = line.find('\t');
+            size_t arrow = line.find(" => ");
+            if (tab != string::npos) { keys = line.substr(0, tab); expected = line.substr(tab + 1); }
+            else if (arrow != string::npos) { keys = line.substr(0, arrow); expected = line.substr(arrow + 4); }
+            else rt = true;   // no delimiter -> auto round-trip the (correct) text
+        }
+        if (rt) {
+            // The line IS the correct Vietnamese; derive the keystrokes that type it.
+            expected = rstripWs(line);
+            keys = vietToTelex(fromUtf8(expected));
+        }
 
+        // Round-tripping real text: English-detection ON so embedded English words
+        // survive, and traditional orthography (òa/úy) which is what most prose
+        // uses (the engine default "modern" oà/uý would mismatch).
+        int savedDetect = vAutoDetectEnglish, savedModern = vUseModernOrthography;
+        if (rt) { vAutoDetectEnglish = 1; vUseModernOrthography = 0; }
         string got = rstripWs(toUtf8(typeFresh(st, keys)));
+        vAutoDetectEnglish = savedDetect; vUseModernOrthography = savedModern;
         string exp = rstripWs(expected);
         bool ok = (got == exp);
-        if (ok) { g_pass++; filePass++; }
+        if (ok) { g_fixPass++; filePass++; }
         else {
-            g_fail++; fileFail++;
+            g_fixFail++; fileFail++;
             printf("    [FAIL] %s:%d  \"%s\" -> \"%s\"  (expect \"%s\")\n",
                    name.c_str(), lineNo, rstripWs(keys).c_str(), got.c_str(), exp.c_str());
         }
@@ -208,6 +313,8 @@ static void runFixtures(vKeyHookState* st, const char* dir) {
     printf("\n== Article fixtures (%s/*.txt) ==\n", dir);
     for (const string& n : files) runFixtureFile(st, string(dir) + "/" + n, n);
     resetFixtureOptions();
+    printf("  fixtures total: %d passed, %d failed (report-only — not part of the gate)\n",
+           g_fixPass, g_fixFail);
 }
 
 int main() {

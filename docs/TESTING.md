@@ -40,8 +40,24 @@ by the simulation. One case per line:
   `@input=telex|vni|simple1|simple2`, `@detect=on|off`, `@modern=on|off`,
   `@spell=on|off`, `@reset`.
 
-See `core/tests/cases/sample.txt` for a worked example. Failures print
-`file:line  "keys" -> "got"  (expect "want")` and fail the run.
+### Round-trip mode (paste correct Vietnamese)
+
+Easiest of all: a line **with no `=>`/TAB delimiter** is treated as already-correct
+text. The harness reverse-encodes it to Telex keystrokes, types them, and verifies
+the result equals your line — so you can paste a whole article and have it
+re-typed and checked, no keystrokes to write. (English-detection is on and
+traditional orthography `òa`/`úy` is used for these lines, matching normal prose;
+add `@modern=on` if your text uses the reform `oà`/`uý` spelling.) `core/tests/
+cases/roundtrip_sample.txt` shows this.
+
+### Gating vs. report-only
+
+Article fixtures are **report-only**: they print `file:line "keys" -> "got"
+(expect "want")` and per-file counts, but do **not** fail the run — so you can
+drop in real articles where a few lines legitimately differ (proper nouns or
+technical/foreign words outside the bundled ~10k English list, source typos,
+spelling conventions). The strict gate that fails CI is the built-in C++ cases
+(engine harness + the simulation's own A–G / regression cases).
 
 ## 3. Live end-to-end (macOS, manual) — `tools/e2e_type.sh`
 
