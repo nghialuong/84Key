@@ -16,6 +16,9 @@
 #include <cstring>
 #include <string>
 #include <cstdint>
+#include <vector>
+#include <algorithm>
+#include <dirent.h>
 
 #include "../engine/Engine.h"
 #include "../engine/EnglishDetect.h"
@@ -117,6 +120,96 @@ static void run(vKeyHookState* st, const Case& c) {
     ok ? g_pass++ : g_fail++;
 }
 
+// ---- File fixtures: load articles/cases from core/tests/cases/*.txt ----------
+//
+// Each line is a case "<keys> => <expected>" (or tab-separated). Lines starting
+// with '#' are comments; blank lines are ignored. Directives set the mode for
+// subsequent lines in that file (reset to Telex/no-detect at the start of each):
+//   @input=telex|vni|simple1|simple2   @detect=on|off
+//   @modern=on|off   @spell=on|off     @reset
+// Trailing whitespace is ignored on both sides.
+
+static string rstripWs(const string& s) {
+    size_t b = s.find_last_not_of(" \t\r\n");
+    return (b == string::npos) ? string() : s.substr(0, b + 1);
+}
+
+static void resetFixtureOptions() {
+    vInputType = 0; vAutoDetectEnglish = 0; vUseModernOrthography = 1; vCheckSpelling = 1;
+}
+
+static void applyDirective(const string& body) {
+    size_t eq = body.find('=');
+    string key = rstripWs(eq == string::npos ? body : body.substr(0, eq));
+    string val = rstripWs(eq == string::npos ? "" : body.substr(eq + 1));
+    size_t a = key.find_first_not_of(" \t"); if (a != string::npos) key = key.substr(a);
+    bool on = (val == "on" || val == "1" || val == "true");
+    if (key == "reset") resetFixtureOptions();
+    else if (key == "input")
+        vInputType = (val == "vni") ? 1 : (val == "simple1") ? 2 : (val == "simple2") ? 3 : 0;
+    else if (key == "detect") vAutoDetectEnglish = on ? 1 : 0;
+    else if (key == "modern") vUseModernOrthography = on ? 1 : 0;
+    else if (key == "spell")  vCheckSpelling = on ? 1 : 0;
+}
+
+static void runFixtureFile(vKeyHookState* st, const string& path, const string& name) {
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return;
+    string data; char b[65536]; size_t r;
+    while ((r = fread(b, 1, sizeof b, f)) > 0) data.append(b, r);
+    fclose(f);
+
+    resetFixtureOptions();
+    int filePass = 0, fileFail = 0, lineNo = 0;
+    size_t pos = 0;
+    while (pos <= data.size()) {
+        size_t nl = data.find('\n', pos);
+        string line = data.substr(pos, nl == string::npos ? string::npos : nl - pos);
+        pos = (nl == string::npos) ? data.size() + 1 : nl + 1;
+        lineNo++;
+
+        size_t a = line.find_first_not_of(" \t\r\n");
+        if (a == string::npos) continue;          // blank
+        if (line[a] == '#') continue;             // comment
+        if (line[a] == '@') { applyDirective(line.substr(a + 1)); continue; }
+
+        string keys, expected;
+        size_t tab = line.find('\t');
+        size_t arrow = line.find(" => ");
+        if (tab != string::npos) { keys = line.substr(0, tab); expected = line.substr(tab + 1); }
+        else if (arrow != string::npos) { keys = line.substr(0, arrow); expected = line.substr(arrow + 4); }
+        else { keys = line; expected = line; }    // no delimiter: expect output == typed (English)
+
+        string got = rstripWs(toUtf8(typeFresh(st, keys)));
+        string exp = rstripWs(expected);
+        bool ok = (got == exp);
+        if (ok) { g_pass++; filePass++; }
+        else {
+            g_fail++; fileFail++;
+            printf("    [FAIL] %s:%d  \"%s\" -> \"%s\"  (expect \"%s\")\n",
+                   name.c_str(), lineNo, rstripWs(keys).c_str(), got.c_str(), exp.c_str());
+        }
+    }
+    printf("  %-24s %d/%d passed\n", name.c_str(), filePass, filePass + fileFail);
+}
+
+static void runFixtures(vKeyHookState* st, const char* dir) {
+    DIR* d = opendir(dir);
+    if (!d) return;
+    vector<string> files;
+    struct dirent* e;
+    while ((e = readdir(d)) != NULL) {
+        string n = e->d_name;
+        if (n.size() > 4 && n.compare(n.size() - 4, 4, ".txt") == 0) files.push_back(n);
+    }
+    closedir(d);
+    if (files.empty()) return;
+    sort(files.begin(), files.end());
+    printf("\n== Article fixtures (%s/*.txt) ==\n", dir);
+    for (const string& n : files) runFixtureFile(st, string(dir) + "/" + n, n);
+    resetFixtureOptions();
+}
+
 int main() {
     string eng, viet;
     { FILE* f = fopen("../data/english_words.dat", "rb"); if (f) { char b[65536]; size_t r; while ((r = fread(b,1,sizeof b,f))>0) eng.append(b,r); fclose(f);} }
@@ -163,6 +256,9 @@ int main() {
     };
     for (auto& c : english) run(st, c);
     vAutoDetectEnglish = 0;
+
+    // User-supplied articles / cases dropped into core/tests/cases/*.txt
+    runFixtures(st, "cases");
 
     printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;
