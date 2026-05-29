@@ -34,7 +34,10 @@ Keep platform-agnostic typing logic in `core/`, and keep macOS-specific code
    bash core/tests/run_tests.sh
    ```
 
-   Do not submit a change with failing tests, and never skip or fake tests.
+   This runs the engine harness and the keystroke simulation of the macOS output
+   pipeline. Do not submit a change with failing tests, and never skip or fake
+   tests. To add typing cases, drop a `core/tests/cases/*.txt` fixture (see
+   [`docs/TESTING.md`](docs/TESTING.md)).
 
 2. **Build the macOS app** if your change touches `platform/macos/`, to make
    sure it still compiles (Xcode / `xcodebuild`).

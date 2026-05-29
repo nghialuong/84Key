@@ -16,8 +16,11 @@ bash core/tests/run_tests.sh
 ```
 
 This compiles `core/engine/*.cpp` with the harness and asserts the Vietnamese
-typing, English-detection and option cases. It exits non-zero on any failure and
-is the gate used in CI.
+typing, English-detection and option cases. It also runs the keystroke
+simulation of the macOS output pipeline. It exits non-zero on any failure and is
+the gate used in CI. For the full testing story — including drop-in article
+fixtures (`core/tests/cases/*.txt`) and the live end-to-end check — see
+[`TESTING.md`](TESTING.md).
 
 ## macOS app
 

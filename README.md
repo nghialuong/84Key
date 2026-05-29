@@ -78,8 +78,10 @@ Requirements: **macOS** with **Xcode** installed, and **[XcodeGen](https://githu
   python3 tools/gen_dict.py
   ```
 
-See [`docs/BUILD.md`](docs/BUILD.md) for details and [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-for how the engine and app fit together.
+See [`docs/BUILD.md`](docs/BUILD.md) for details, [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+for how the engine and app fit together, and [`docs/TESTING.md`](docs/TESTING.md) for the test
+suites (engine harness, keystroke simulation with drop-in `cases/*.txt` fixtures, and the live
+end-to-end check).
 
 Notarized distribution requires an Apple Developer account (planned for a
 future release); local development builds do not.

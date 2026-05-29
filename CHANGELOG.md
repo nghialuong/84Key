@@ -30,7 +30,9 @@ First macOS release.
   external word list); English word list from the public-domain
   google-10000-english set.
 - **Privacy**: 100% local processing, no telemetry, no network calls for typing.
-- C++ engine test harness and continuous integration.
+- C++ engine test harness, a keystroke-level simulation of the macOS output
+  pipeline with drop-in `cases/*.txt` article fixtures, a live end-to-end script,
+  and continuous integration.
 
 [Unreleased]: https://github.com/nghialuong/84Key/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/nghialuong/84Key/releases/tag/v0.1.0
