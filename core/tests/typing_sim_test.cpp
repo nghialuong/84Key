@@ -194,8 +194,10 @@ static u32string fromUtf8(const string& s) {
 // keystrokes that produce it. Diacritic letters map to base + tone key (the tone
 // key right after the vowel, which Telex accepts); ASCII passes through. Used by
 // @roundtrip fixtures so you can paste correct Vietnamese and have it re-typed.
-static const std::map<char32_t, string>& vietToTelexMap() {
-    static std::map<char32_t, string> m;
+// codepoint -> (base telex letters, tone key). Tone is kept separate so it can be
+// deferred to the end of the word (the canonical Telex spelling, e.g. bản->"banr").
+static const std::map<char32_t, std::pair<string, string>>& vietToTelexMap() {
+    static std::map<char32_t, std::pair<string, string>> m;
     if (!m.empty()) return m;
     static const char* tone[6] = {"", "s", "f", "r", "x", "j"}; // none,sắc,huyền,hỏi,ngã,nặng
     struct Row { const char* lo; const char* up; char32_t loCp[6]; char32_t upCp[6]; };
@@ -215,22 +217,30 @@ static const std::map<char32_t, string>& vietToTelexMap() {
     };
     for (const Row& r : rows)
         for (int t = 0; t < 6; t++) {
-            m[r.loCp[t]] = string(r.lo) + tone[t];
-            m[r.upCp[t]] = string(r.up) + tone[t];
+            m[r.loCp[t]] = {r.lo, tone[t]};
+            m[r.upCp[t]] = {r.up, tone[t]};
         }
-    m[0x111] = "dd"; m[0x110] = "Dd"; // đ / Đ
+    m[0x111] = {"dd", ""}; m[0x110] = {"Dd", ""}; // đ / Đ
     return m;
 }
 
 static string vietToTelex(const u32string& s) {
     const auto& m = vietToTelexMap();
-    string out;
+    string out, run, tone;
+    auto flush = [&]() { out += run + tone; run.clear(); tone.clear(); };
     for (char32_t c : s) {
         auto it = m.find(c);
-        if (it != m.end()) out += it->second;
-        else if (c < 0x80) out.push_back((char)c); // ASCII passes through
-        // other (rare) codepoints are dropped
+        if (it != m.end()) {                        // Vietnamese letter
+            run += it->second.first;
+            if (!it->second.second.empty()) tone = it->second.second;
+        } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+            run += (char)c;                          // ASCII letter: part of the word
+        } else {                                     // word boundary
+            flush();
+            if (c < 0x80) out.push_back((char)c);
+        }
     }
+    flush();
     return out;
 }
 

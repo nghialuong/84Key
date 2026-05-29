@@ -1,0 +1,8 @@
+# English words mixed into Vietnamese must come out clean (no diacritics);
+# diacritics only land on the Vietnamese words. Auto-round-trip, detect on.
+# (Mid-word a transient diacritic may flash, e.g. "case"->"cá"->"case"; it is
+# restored once the word ends. These check the FINAL text after a word break.)
+Tôi mở một cái case mới để test.
+Anh ấy nói wow khi xem demo.
+Cả team review lại project này cho kỹ.
+Một cái dashboard giúp team monitor nhanh hơn.

@@ -134,7 +134,7 @@ def _emit(out, word):
         out.add(word)
 
 
-def add_syllable(out, onset, rhyme):
+def add_syllable(out, onset, rhyme, english):
     base = onset + rhyme
     vowel, final = split_final(rhyme)
     stop = rhyme.endswith(STOP_CODAS)
@@ -147,29 +147,37 @@ def add_syllable(out, onset, rhyme):
             continue               # stop codas (p/t/c/ch) only carry sắc or nặng
         _emit(out, base + tone)                      # tone after the final
         if final:
-            _emit(out, onset + vowel + tone + final)  # tone right after the vowel
+            # The alternate "tone right after the vowel" spelling (e.g. "barn" for
+            # bản) helps Vietnamese typing, but skip it when it equals a common
+            # English word ("test"=tét, "barn"=bản): otherwise that English word
+            # would be treated as Vietnamese. The canonical end-tone form (banr,
+            # tets) is still emitted above, so the Vietnamese word is reachable.
+            vf = onset + vowel + tone + final
+            if vf not in english:
+                _emit(out, vf)
 
 
-def gen_viet():
+def gen_viet(english):
     out = set()
     # non-velar onsets attach to every rhyme group directly
     for onset in ONSET_NONVELAR:
         for rhyme in RHYMES_BACK + RHYMES_FRONT:
-            add_syllable(out, onset, rhyme)
+            add_syllable(out, onset, rhyme, english)
         for rhyme in RHYMES_UGLIDE:
-            add_syllable(out, onset, rhyme)
+            add_syllable(out, onset, rhyme, english)
     # velar onsets: spelling depends on the rhyme group
     for group, rhymes in (("back", RHYMES_BACK), ("front", RHYMES_FRONT)):
         for sound in ("k", "g", "ng"):
             onset = velar_for(group, sound)
             for rhyme in rhymes:
-                add_syllable(out, onset, rhyme)
+                add_syllable(out, onset, rhyme, english)
     # u-glide rhymes with a velar /k/ are written "qu" + (rhyme without leading u)
     for rhyme in RHYMES_UGLIDE:
         if rhyme.startswith("u"):
-            add_syllable(out, "q", rhyme)  # q + u... = "qu..."
+            add_syllable(out, "q", rhyme, english)  # q + u... = "qu..."
     # The "gi" onset can stand with just a tone (gì, gí, gị, gĩ, gỉ, gi): the vowel
     # i is absorbed into the onset, so it isn't produced by onset×rhyme above.
+    # (Kept even though "gif" is an English word — gì is a very common VN word.)
     for tone in TONES:
         _emit(out, "gi" + tone)
     return out
@@ -198,10 +206,8 @@ def main():
                     help="print Vietnamese syllables that collide with English words")
     args = ap.parse_args()
 
-    viet = gen_viet()
-    write(os.path.join(DATA, "viet_telex.dat"), viet)
-    print(f"viet_telex.dat:    {len(viet)} syllables")
-
+    # Load the English set first — the Vietnamese generator uses it to avoid
+    # emitting alternate spellings that shadow common English words.
     eng_path = os.path.join(DATA, "english_words.dat")
     if args.english:
         eng = gen_english(args.english)
@@ -214,6 +220,10 @@ def main():
     else:
         eng = set()
         print("english_words.dat: MISSING (pass --english to generate)")
+
+    viet = gen_viet(eng)
+    write(os.path.join(DATA, "viet_telex.dat"), viet)
+    print(f"viet_telex.dat:    {len(viet)} syllables")
 
     if args.report_collisions and eng:
         collide = sorted(viet & eng)

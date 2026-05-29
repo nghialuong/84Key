@@ -132,7 +132,6 @@ apj
 aps
 ar
 ari
-arm
 arn
 arng
 arnh
@@ -144,11 +143,9 @@ asc
 asch
 asi
 asm
-asn
 asng
 asnh
 aso
-asp
 ast
 asu
 asy
@@ -355,7 +352,6 @@ baps
 bar
 bari
 barm
-barn
 barng
 barnh
 baro
@@ -558,7 +554,6 @@ besn
 besng
 beso
 besp
-best
 betj
 bets
 bex
@@ -947,7 +942,6 @@ boosm
 boosn
 boosng
 boosp
-boost
 bootj
 boots
 boox
@@ -960,7 +954,6 @@ bops
 bor
 bori
 borm
-born
 borng
 boro
 bos
@@ -1259,7 +1252,6 @@ bups
 bur
 buri
 burm
-burn
 burng
 bury
 bus
@@ -1270,7 +1262,6 @@ busn
 busng
 busp
 bust
-busy
 butj
 buts
 buw
@@ -1678,7 +1669,6 @@ casng
 casnh
 caso
 casp
-cast
 casu
 casy
 catj
@@ -1883,7 +1873,6 @@ chapj
 chaps
 char
 chari
-charm
 charn
 charng
 charnh
@@ -2087,7 +2076,6 @@ chesn
 chesng
 cheso
 chesp
-chest
 chetj
 chets
 chex
@@ -3138,7 +3126,6 @@ coasng
 coasnh
 coaso
 coasp
-coast
 coasy
 coatj
 coats
@@ -3326,7 +3313,6 @@ cops
 cor
 cori
 corm
-corn
 corng
 coro
 cos
@@ -3337,7 +3323,6 @@ cosn
 cosng
 coso
 cosp
-cost
 cotj
 cots
 cow
@@ -5412,7 +5397,6 @@ dism
 disn
 disnh
 disp
-dist
 disu
 ditj
 dits
@@ -6006,7 +5990,6 @@ dusm
 dusn
 dusng
 dusp
-dust
 dusy
 dutj
 duts
@@ -6380,7 +6363,6 @@ esn
 esng
 eso
 esp
-est
 etj
 ets
 ex
@@ -6528,7 +6510,6 @@ garng
 garnh
 garo
 garu
-gary
 gas
 gasc
 gasch
@@ -8947,7 +8928,6 @@ hapj
 haps
 har
 hari
-harm
 harn
 harng
 harnh
@@ -9143,7 +9123,6 @@ her
 herm
 hern
 herng
-hero
 hes
 hesc
 hesm
@@ -9268,7 +9247,6 @@ hism
 hisn
 hisnh
 hisp
-hist
 hisu
 hitj
 hits
@@ -9553,7 +9531,6 @@ hops
 hor
 hori
 horm
-horn
 horng
 horo
 hos
@@ -9564,7 +9541,6 @@ hosn
 hosng
 hoso
 hosp
-host
 hotj
 hots
 how
@@ -10228,8 +10204,6 @@ isch
 ism
 isn
 isnh
-isp
-ist
 isu
 itj
 its
@@ -12004,7 +11978,6 @@ lasng
 lasnh
 laso
 lasp
-last
 lasu
 lasy
 latj
@@ -12308,7 +12281,6 @@ lism
 lisn
 lisnh
 lisp
-list
 lisu
 litj
 lits
@@ -12604,7 +12576,6 @@ losn
 losng
 loso
 losp
-lost
 lotj
 lots
 low
@@ -13300,7 +13271,6 @@ marng
 marnh
 maro
 maru
-mary
 mas
 masc
 masch
@@ -13911,7 +13881,6 @@ mosn
 mosng
 moso
 mosp
-most
 motj
 mots
 mow
@@ -14209,7 +14178,6 @@ musm
 musn
 musng
 musp
-must
 musy
 mutj
 muts
@@ -14805,7 +14773,6 @@ nesn
 nesng
 neso
 nesp
-nest
 netj
 nets
 nex
@@ -17631,7 +17598,6 @@ nopj
 nops
 nor
 nori
-norm
 norn
 norng
 noro
@@ -19956,7 +19922,6 @@ queex
 queexn
 queexnh
 quejt
-quest
 quetj
 quets
 qufy
@@ -20376,7 +20341,6 @@ resn
 resng
 reso
 resp
-rest
 retj
 rets
 rex
@@ -22860,7 +22824,6 @@ tawxm
 tawxn
 tawxng
 tax
-taxi
 taxm
 taxn
 taxng
@@ -22979,7 +22942,6 @@ teox
 tepj
 teps
 ter
-term
 tern
 terng
 tero
@@ -22990,7 +22952,6 @@ tesn
 tesng
 teso
 tesp
-test
 tetj
 tets
 tex
@@ -25815,7 +25776,6 @@ trusm
 trusn
 trusng
 trusp
-trust
 trusy
 trutj
 truts
@@ -26305,7 +26265,6 @@ tups
 tur
 turi
 turm
-turn
 turng
 tury
 tus
@@ -26803,13 +26762,11 @@ uoxo
 upj
 ups
 ur
-uri
 urm
 urn
 urng
 ury
 us
-usc
 usi
 usm
 usn
@@ -27159,7 +27116,6 @@ varng
 varnh
 varo
 varu
-vary
 vas
 vasc
 vasch
@@ -27170,7 +27126,6 @@ vasng
 vasnh
 vaso
 vasp
-vast
 vasu
 vasy
 vatj
