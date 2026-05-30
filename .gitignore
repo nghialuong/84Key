@@ -3,6 +3,14 @@
 CLAUDE.md
 private_docs/
 PROGRESS.md
+# Local Claude Code tooling (installed skills, local settings) — not the product.
+.claude/
+
+# --- Generated Xcode project (source of truth is project.yml + xcodegen) ---
+# Run `xcodegen generate` to (re)create it; never commit the generated project.
+platform/macos/84Key.xcodeproj/
+# Per-machine signing override (keeps a personal Team ID out of git, if used).
+platform/macos/*.local.xcconfig
 
 # --- macOS ---
 .DS_Store
