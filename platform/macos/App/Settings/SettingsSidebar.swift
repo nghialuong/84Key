@@ -22,6 +22,9 @@ struct SettingsSidebar: View {
             }
         }
         .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)        // let the vibrancy show through
+        .key84SidebarVibrancy()                  // real translucent sidebar (glass on macOS 26)
+        .toolbar(removing: .sidebarToggle)       // drop the stray centered toggle button
         .safeAreaInset(edge: .bottom, spacing: 0) {
             SidebarIdentityFooter()
         }

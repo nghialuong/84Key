@@ -87,6 +87,45 @@ extension Color {
     }
 }
 
+// MARK: - Vibrancy (Liquid Glass-ready sidebar material)
+
+/// A thin wrapper over `NSVisualEffectView` so SwiftUI surfaces can use real
+/// AppKit vibrancy. The `.sidebar` material is the system's translucent sidebar
+/// backing — it shows the desktop/content behind the window and is rendered as
+/// Liquid Glass automatically on macOS 26+. This is the backward-compatible way
+/// to get the glass look without calling macOS 26-only `glassEffect` APIs (which
+/// the deployment target — macOS 14 — can't reference directly).
+public struct Key84VisualEffect: NSViewRepresentable {
+    public var material: NSVisualEffectView.Material
+    public var blending: NSVisualEffectView.BlendingMode
+
+    public init(material: NSVisualEffectView.Material = .sidebar,
+                blending: NSVisualEffectView.BlendingMode = .behindWindow) {
+        self.material = material
+        self.blending = blending
+    }
+
+    public func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = material
+        view.blendingMode = blending
+        view.state = .followsWindowActiveState
+        return view
+    }
+
+    public func updateNSView(_ view: NSVisualEffectView, context: Context) {
+        view.material = material
+        view.blendingMode = blending
+    }
+}
+
+public extension View {
+    /// Back the view with the system sidebar vibrancy (Liquid Glass on macOS 26).
+    func key84SidebarVibrancy() -> some View {
+        background(Key84VisualEffect(material: .sidebar, blending: .behindWindow).ignoresSafeArea())
+    }
+}
+
 // MARK: - App badge (small)
 
 /// The small 84Key badge. Used only for quiet identity (≤28pt), never as a hero.
