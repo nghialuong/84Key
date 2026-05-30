@@ -11,8 +11,9 @@ core/
   data/     english_words.dat, viet_telex.dat (generated)
   tests/    C++ test harness (engine + English detection)
 platform/macos/
-  App/      SwiftUI: Key84App, AppDelegate, SettingsView, AppSettings,
-            OnboardingView, LoginItemManager
+  App/      SwiftUI: Key84App (menu-bar entry), AppDelegate, AppController
+            (owns the input controller + permission/login lifecycle),
+            SettingsView, AppSettings, OnboardingView, LoginItemManager
   Input/    Obj-C++: InputController (CGEvent tap, key send, Spotlight AX),
             EngineGlobals.cpp (engine option globals)
   Bridge/   Key84-Bridging-Header.h (exposes InputController to Swift)
