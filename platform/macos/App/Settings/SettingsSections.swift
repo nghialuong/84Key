@@ -23,14 +23,15 @@ struct SettingsPage<Content: View>: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Key84DS.Spacing.xl) {
-                VStack(alignment: .leading, spacing: Key84DS.Spacing.xs) {
+            VStack(alignment: .leading, spacing: Key84DS.Layout.sectionSpacing) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(section.title)
                         .font(Key84DS.Typography.pageTitle)
                     Text(section.subtitle)
                         .font(Key84DS.Typography.pageSubtitle)
                         .foregroundStyle(Key84DS.Color.textSecondary)
                 }
+                .padding(.bottom, 8)
                 content
             }
             .frame(maxWidth: Key84DS.Layout.contentMaxWidth, alignment: .leading)
@@ -38,6 +39,7 @@ struct SettingsPage<Content: View>: View {
             .padding(.horizontal, Key84DS.Layout.detailHorizontalPadding)
             .padding(.bottom, Key84DS.Layout.detailBottomPadding)
         }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 
@@ -69,18 +71,23 @@ private struct OverviewPage: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var app: AppController
 
+    private var isVietnamese: Bool { settings.language == 1 }
+
     var body: some View {
         SettingsPage(section: .overview) {
-            Key84HeroStatusCard(
-                isVietnamese: settings.language == 1,
-                shortcut: "⌘E",
-                primaryActionTitle: settings.language == 1 ? "Chuyển sang tiếng Anh" : "Chuyển sang tiếng Việt"
-            ) {
-                // Mirrors the menu-bar action: toggle the engine language.
-                settings.language = (settings.language == 1) ? 0 : 1
+            Key84SettingsGroup("Trạng thái") {
+                Key84SettingRow("84Key", subtitle: isVietnamese ? "Tiếng Việt đang bật" : "Tiếng Việt đang tắt") {
+                    Button(isVietnamese ? "Chuyển sang tiếng Anh" : "Chuyển sang tiếng Việt") {
+                        // Mirrors the menu-bar action: toggle the engine language.
+                        settings.language = isVietnamese ? 0 : 1
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                }
+                Key84InfoRow("Phím tắt chuyển ngôn ngữ", value: "⌥ Space", monospaced: true)
             }
 
-            PermissionCard(app: app)
+            PermissionGroup(app: app)
 
             Key84SettingsGroup("Cài đặt nhanh") {
                 Key84ToggleRow("Tự động nhận diện tiếng Anh", isOn: $settings.autoDetectEnglish)
@@ -92,45 +99,32 @@ private struct OverviewPage: View {
     }
 }
 
-/// Accessibility-permission status as a clean status group, wired to the real
-/// `AppController` flow. No oversized icon; accent reserved for the CTA only.
-private struct PermissionCard: View {
+/// Accessibility-permission status as a native group row, wired to the real
+/// `AppController` flow. Small green status text when granted; a bordered CTA
+/// when not.
+private struct PermissionGroup: View {
     @ObservedObject var app: AppController
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Key84DS.Spacing.sm) {
-            Key84SectionHeader("Quyền truy cập")
-            Key84GlassCard {
-                HStack(alignment: .center, spacing: Key84DS.Spacing.md) {
-                    Circle()
-                        .fill(app.hasPermission ? Key84DS.Color.success : Key84DS.Color.warning)
-                        .frame(width: 8, height: 8)
-
-                    VStack(alignment: .leading, spacing: Key84DS.Spacing.xxs) {
-                        Text("Quyền Trợ năng")
-                            .font(Key84DS.Typography.rowTitle.weight(.medium))
-                        Text(app.hasPermission
-                             ? "84Key đã có quyền để xử lý phím gõ trên thiết bị này."
-                             : "Cần quyền Trợ năng để 84Key nhận phím và đặt dấu. Nội dung bạn gõ không rời khỏi máy.")
-                            .font(Key84DS.Typography.rowSubtitle)
-                            .foregroundStyle(Key84DS.Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    Spacer(minLength: Key84DS.Spacing.lg)
-
-                    if app.hasPermission {
-                        Key84StatusChip("Đã cấp quyền", style: .success)
-                    } else {
-                        VStack(alignment: .trailing, spacing: Key84DS.Spacing.xs) {
-                            Button("Mở Cài đặt hệ thống") { app.openAccessibilitySettings() }
-                                .buttonStyle(.borderedProminent)
-                                .tint(Key84DS.Color.accent)
-                            Button("Khởi động lại 84Key") { app.relaunch() }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                        }
-                    }
+        Key84SettingsGroup("Quyền truy cập") {
+            Key84SettingRow("Quyền Trợ năng",
+                            subtitle: "84Key cần quyền này để xử lý phím gõ.") {
+                if app.hasPermission {
+                    Label("Đã cấp quyền", systemImage: "checkmark.circle.fill")
+                        .font(Key84DS.Typography.rowSubtitle)
+                        .foregroundStyle(Key84DS.Color.success)
+                } else {
+                    Button("Mở Cài đặt hệ thống") { app.openAccessibilitySettings() }
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
+                }
+            }
+            if !app.hasPermission {
+                Key84SettingRow("Đã cấp quyền nhưng chưa nhận?",
+                                subtitle: "Khởi động lại 84Key để áp dụng quyền mới.") {
+                    Button("Khởi động lại") { app.relaunch() }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                 }
             }
         }
@@ -242,7 +236,7 @@ private struct SystemPage: View {
 
             Key84SettingsGroup("Chuyển ngôn ngữ") {
                 Key84InfoRow("Chuyển ngôn ngữ", value: "Bấm vào mục VI/EN trên thanh menu")
-                Key84InfoRow("Phím tắt chuyển nhanh", value: "⌘E")
+                Key84InfoRow("Phím tắt chuyển nhanh", value: "⌥ Space", monospaced: true)
             }
         }
     }
@@ -255,8 +249,8 @@ private struct ShortcutsPage: View {
         SettingsPage(section: .shortcuts) {
             Key84SettingsGroup("Phím tắt hiện tại",
                                footer: "Tùy chỉnh phím tắt sẽ được hỗ trợ trong bản sau.") {
-                Key84InfoRow("Chuyển VI/EN", value: "⌘E")
-                Key84InfoRow("Mở Cài đặt", value: "⌘,")
+                Key84InfoRow("Chuyển VI/EN", value: "⌥ Space", monospaced: true)
+                Key84InfoRow("Mở Cài đặt", value: "⌘ ,", monospaced: true)
             }
         }
     }

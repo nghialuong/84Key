@@ -49,8 +49,8 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         }
     }
 
-    /// SF Symbol for the sidebar.
-    var icon: String {
+    /// SF Symbol for the native sidebar `Label`.
+    var systemImage: String {
         switch self {
         case .overview:      return "house"
         case .input:         return "keyboard"
@@ -61,11 +61,6 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .shortcuts:     return "command"
         case .advanced:      return "slider.horizontal.3"
         }
-    }
-
-    /// Bridge to the design-system sidebar model.
-    var sidebarModel: Key84SidebarItemModel {
-        Key84SidebarItemModel(id: rawValue, title: title, systemIcon: icon)
     }
 }
 
