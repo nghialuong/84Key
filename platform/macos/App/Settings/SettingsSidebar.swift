@@ -2,8 +2,9 @@
 //  SettingsSidebar.swift
 //  84Key
 //
-//  Native macOS Settings-style sidebar: a translucent column of accent-selected
-//  destinations with an app-identity footer.
+//  Native macOS Settings-style sidebar: a quiet, translucent column of
+//  destinations with a neutral selection highlight and a small app-identity
+//  footer.
 //
 
 import SwiftUI
@@ -14,7 +15,7 @@ struct SettingsSidebar: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(spacing: Key84DS.Spacing.xxs) {
+                VStack(spacing: 2) {
                     ForEach(SettingsSection.allCases) { section in
                         Key84SidebarItem(
                             section.sidebarModel,
@@ -24,15 +25,15 @@ struct SettingsSidebar: View {
                         }
                     }
                 }
-                .padding(.horizontal, Key84DS.Spacing.sm)
-                .padding(.top, Key84DS.Spacing.sm)
+                .padding(.horizontal, Key84DS.Layout.sidebarRowInset)
+                .padding(.top, Key84DS.Spacing.md)
             }
 
             Divider()
             Key84SidebarFooter(version: Key84Bundle.shortVersion)
         }
         .frame(maxHeight: .infinity)
-        .key84SidebarMaterial()
+        .key84SidebarSurface()
     }
 }
 

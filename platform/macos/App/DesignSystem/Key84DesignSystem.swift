@@ -3,21 +3,17 @@
 //  84Key
 //
 //  The official 84Key design system: design tokens (color, type, spacing,
-//  radius, material, layout, animation) plus a small set of reusable, native
-//  feeling SwiftUI components for Settings, the menu-bar popover, onboarding
-//  and the permission flow.
+//  radius, material, layout, animation) plus a small set of reusable components
+//  for Settings, the menu-bar popover, onboarding and the permission flow.
 //
-//  Goals
-//  - Feel like a real macOS-native app (System Settings-style), not a web app.
-//  - Lean on system controls (Toggle, Picker, Button) wherever they are good
-//    enough; only wrap them for consistent rows, spacing and chrome.
-//  - Be "Liquid Glass-ready" for macOS 26 through a single surface abstraction
-//    that today falls back to standard materials and keeps building on the
-//    project's current SDK / deployment target (macOS 14).
-//  - Use a refined pink/magenta accent, applied sparingly.
+//  Design rule: when in doubt, look like macOS System Settings, not a custom
+//  dashboard. Native controls, restrained accent, subtle materials, quiet
+//  sidebar, grouped forms, consistent row rhythm.
 //
-//  This file is intentionally self-contained and has no third-party
-//  dependencies. It does not touch the engine, InputController or AppSettings.
+//  Liquid Glass-ready: surfaces flow through a single material abstraction
+//  (`key84CardSurface` / `key84SidebarSurface`) that uses `.regularMaterial` /
+//  `.bar` today and keeps building on the current SDK / macOS 14 deployment
+//  target. No third-party dependencies; no private or non-existent APIs.
 //
 
 import SwiftUI
@@ -26,35 +22,25 @@ import AppKit
 // MARK: - Namespace
 
 /// Root namespace for all 84Key design tokens.
-///
-/// Usage:
-/// ```swift
-/// Text("Tổng quan").font(Key84DS.Typography.sectionTitle)
-/// someView.padding(Key84DS.Spacing.cardPadding)
-/// ```
 public enum Key84DS {}
 
 // MARK: - Color tokens
 
 public extension Key84DS {
     /// Semantic colors. Every token resolves correctly in light and dark mode.
-    ///
-    /// Prefer these over hardcoded values. Where a system semantic color is the
-    /// right answer (e.g. primary/secondary label), we forward to it so 84Key
-    /// inherits macOS behaviour (increase-contrast, accessibility, etc.).
+    /// Accent is used sparingly — app badge, selected sidebar icon, status chips.
     enum Color {
-        // Accent — refined 84Key pink/magenta, used sparingly.
-        /// Primary accent (selected sidebar item, primary action, status, tint).
+        /// Refined 84Key pink/magenta. Restrained: not for every icon/button.
         public static let accent = SwiftUI.Color(
-            light: NSColor(srgbRed: 0.78, green: 0.16, blue: 0.49, alpha: 1.0),   // #C72A7D-ish
-            dark:  NSColor(srgbRed: 0.93, green: 0.38, blue: 0.65, alpha: 1.0)    // brighter for dark
+            light: NSColor(srgbRed: 0.78, green: 0.16, blue: 0.49, alpha: 1.0),
+            dark:  NSColor(srgbRed: 0.93, green: 0.38, blue: 0.65, alpha: 1.0)
         )
-        /// Soft accent wash for selection backgrounds / hover fills.
+        /// Soft accent wash (rarely used; prefer neutral highlights).
         public static let accentSoft = SwiftUI.Color(
             light: NSColor(srgbRed: 0.78, green: 0.16, blue: 0.49, alpha: 0.12),
             dark:  NSColor(srgbRed: 0.93, green: 0.38, blue: 0.65, alpha: 0.20)
         )
-        /// Desaturated accent for subtle borders / muted chips.
+        /// Desaturated accent for muted accents.
         public static let accentMuted = SwiftUI.Color(
             light: NSColor(srgbRed: 0.62, green: 0.36, blue: 0.50, alpha: 0.55),
             dark:  NSColor(srgbRed: 0.80, green: 0.55, blue: 0.68, alpha: 0.55)
@@ -68,22 +54,22 @@ public extension Key84DS {
         // Structure
         public static let separator = SwiftUI.Color(nsColor: .separatorColor)
 
-        /// Card / grouped-row background. Sits on top of a material surface, so
-        /// it is deliberately faint and translucent.
-        public static let cardBackground = SwiftUI.Color(
-            light: NSColor.white.withAlphaComponent(0.55),
-            dark:  NSColor.white.withAlphaComponent(0.06)
-        )
-
-        /// Selected sidebar row fill (uses the soft accent wash).
-        public static let sidebarSelection = accentSoft
+        /// Quiet, neutral selection/hover fill (System Settings-style). Resolves
+        /// to a faint primary tint that reads well in both appearances.
+        public static func neutralFill(_ scheme: ColorScheme, selected: Bool) -> SwiftUI.Color {
+            if selected {
+                return SwiftUI.Color.primary.opacity(scheme == .dark ? 0.12 : 0.08)
+            } else {
+                return SwiftUI.Color.primary.opacity(scheme == .dark ? 0.06 : 0.05)
+            }
+        }
 
         // Status
         public static let success = SwiftUI.Color(nsColor: .systemGreen)
         public static let warning = SwiftUI.Color(nsColor: .systemOrange)
         public static let danger  = SwiftUI.Color(nsColor: .systemRed)
 
-        // MARK: NSColor bridges (for AppKit-side use: status item, etc.)
+        /// NSColor bridge for AppKit-side use (status item, etc.).
         public static let accentNSColor = NSColor(
             name: nil,
             dynamicProvider: { appearance in
@@ -98,25 +84,26 @@ public extension Key84DS {
 // MARK: - Typography tokens
 
 public extension Key84DS {
-    /// Semantic text styles built on the system font. No custom fonts.
+    /// Semantic text styles built on the system font. macOS-like hierarchy with
+    /// restrained sizes — no oversized text.
     enum Typography {
-        public static let largeTitle    = Font.system(.largeTitle, design: .default).weight(.bold)
-        public static let title         = Font.system(.title2, design: .default).weight(.semibold)
-        public static let sectionTitle  = Font.system(.subheadline, design: .default).weight(.semibold)
-        public static let rowTitle      = Font.system(.body, design: .default)
-        public static let rowSubtitle   = Font.system(.callout, design: .default)
-        public static let caption       = Font.system(.caption, design: .default)
-        public static let badge         = Font.system(.caption2, design: .default).weight(.semibold)
-        public static let sidebarItem   = Font.system(.body, design: .default)
-        /// Monospaced style for keyboard shortcuts (e.g. ⌥ Space).
-        public static let monoShortcut  = Font.system(.callout, design: .monospaced).weight(.medium)
+        public static let pageTitle    = Font.system(size: 28, weight: .semibold)
+        public static let pageSubtitle = Font.system(size: 13)
+        public static let cardTitle    = Font.system(size: 15, weight: .semibold)
+        public static let sectionLabel = Font.system(size: 13, weight: .semibold)
+        public static let rowTitle     = Font.system(size: 13)
+        public static let rowSubtitle  = Font.system(size: 12)
+        public static let caption      = Font.system(size: 11)
+        public static let badge        = Font.system(size: 11, weight: .medium)
+        public static let sidebarItem  = Font.system(size: 14)
+        public static let monoShortcut = Font.system(size: 12, design: .monospaced).weight(.medium)
     }
 }
 
 // MARK: - Spacing tokens
 
 public extension Key84DS {
-    /// Spacing scale (points). Keep usage on the scale for visual rhythm.
+    /// Spacing scale (points).
     enum Spacing {
         public static let xxs: CGFloat = 2
         public static let xs:  CGFloat = 4
@@ -132,58 +119,41 @@ public extension Key84DS {
 
 public extension Key84DS {
     enum Radius {
-        public static let chip:  CGFloat = 6
-        public static let row:   CGFloat = 8
-        public static let card:  CGFloat = 12
-        public static let hero:  CGFloat = 16
-    }
-}
-
-// MARK: - Shadow tokens
-
-public extension Key84DS {
-    /// Subtle elevation. macOS prefers borders over heavy shadows, so these are
-    /// deliberately soft.
-    struct Shadow {
-        public let color: SwiftUI.Color
-        public let radius: CGFloat
-        public let x: CGFloat
-        public let y: CGFloat
-
-        public static let card = Shadow(
-            color: SwiftUI.Color.black.opacity(0.06), radius: 6, x: 0, y: 1
-        )
-        public static let hero = Shadow(
-            color: SwiftUI.Color.black.opacity(0.10), radius: 14, x: 0, y: 3
-        )
+        public static let chip:    CGFloat = 6
+        public static let sidebar: CGFloat = 8
+        public static let card:    CGFloat = 12
     }
 }
 
 // MARK: - Layout tokens
 
 public extension Key84DS {
-    /// Window / pane geometry. Tuned to feel spacious, like System Settings.
+    /// Window / pane geometry, tuned to native System Settings proportions.
     enum Layout {
-        public static let windowMinWidth:    CGFloat = 980
-        public static let windowMinHeight:   CGFloat = 680
-        public static let windowIdealWidth:  CGFloat = 1100
-        public static let windowIdealHeight: CGFloat = 760
-        public static let sidebarWidth:      CGFloat = 248
-        public static let sidebarMinWidth:   CGFloat = 240
-        public static let sidebarMaxWidth:   CGFloat = 280
-        public static let contentMaxWidth:   CGFloat = 640
+        public static let windowMinWidth:    CGFloat = 920
+        public static let windowMinHeight:   CGFloat = 640
+        public static let windowIdealWidth:  CGFloat = 1000
+        public static let windowIdealHeight: CGFloat = 700
 
-        public static let cardPadding:     CGFloat = 16
-        public static let rowMinHeight:    CGFloat = 44
-        public static let rowVPadding:     CGFloat = 8
-        public static let sectionSpacing:  CGFloat = 24
-        public static let controlSpacing:  CGFloat = 10
+        public static let sidebarWidth:      CGFloat = 240
+        public static let contentMaxWidth:   CGFloat = 680
+        public static let detailTopPadding:      CGFloat = 56
+        public static let detailHorizontalPadding: CGFloat = 48
+        public static let detailBottomPadding:    CGFloat = 32
 
-        // Icon sizes
-        public static let iconSmall:   CGFloat = 14
-        public static let iconRow:     CGFloat = 18
-        public static let iconSidebar: CGFloat = 16
-        public static let iconHero:    CGFloat = 28
+        // Rows
+        public static let rowMinHeight:         CGFloat = 44
+        public static let rowMinHeightSubtitle: CGFloat = 58
+        public static let rowHPadding:          CGFloat = 14
+        public static let dividerInset:         CGFloat = 16
+
+        // Sidebar
+        public static let sidebarRowHeight:  CGFloat = 36
+        public static let sidebarIconSize:   CGFloat = 16
+        public static let sidebarIconWidth:  CGFloat = 20
+        public static let sidebarRowInset:   CGFloat = 8
+
+        public static let cardPadding: CGFloat = 14
     }
 }
 
@@ -192,7 +162,6 @@ public extension Key84DS {
 public extension Key84DS {
     enum Animation {
         public static let hover: SwiftUI.Animation  = .easeOut(duration: 0.12)
-        public static let toggle: SwiftUI.Animation = .spring(response: 0.3, dampingFraction: 0.8)
         public static let select: SwiftUI.Animation = .easeInOut(duration: 0.15)
     }
 }
@@ -200,19 +169,11 @@ public extension Key84DS {
 // MARK: - Material / surface tokens
 
 public extension Key84DS {
-    /// Surface roles, mapped to system materials. This is the single place where
-    /// translucency is decided — components reference roles, not raw materials.
+    /// Surface roles mapped to system materials. Components reference roles,
+    /// not raw materials, so translucency is decided in one place.
     enum Surface {
-        /// The window content background.
-        public static let window: Material = .regularMaterial
-        /// Sidebar background (slightly more translucent).
-        public static let sidebar: Material = .ultraThinMaterial
-        /// Grouped settings cards.
         public static let card: Material = .regularMaterial
-        /// Chips / small floating elements.
-        public static let chip: Material = .thinMaterial
-        /// Top bar / hero backing.
-        public static let bar: Material = .bar
+        public static let sidebar: Material = .bar
     }
 }
 
@@ -220,14 +181,11 @@ public extension Key84DS {
 
 extension NSAppearance {
     /// True when the effective appearance is one of the dark variants.
-    var isDark: Bool {
-        bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-    }
+    var isDark: Bool { bestMatch(from: [.aqua, .darkAqua]) == .darkAqua }
 }
 
 extension Color {
-    /// Build a dynamic Color from explicit light/dark `NSColor`s. Resolves at
-    /// draw time, so it tracks appearance changes without manual refresh.
+    /// Build a dynamic Color from explicit light/dark `NSColor`s.
     init(light: NSColor, dark: NSColor) {
         self = Color(nsColor: NSColor(name: nil, dynamicProvider: { appearance in
             appearance.isDark ? dark : light
@@ -235,114 +193,72 @@ extension Color {
     }
 }
 
-// MARK: - Liquid Glass-ready surface modifier
-
-public extension Key84DS {
-    /// Surface treatment for a rounded container.
-    ///
-    /// On macOS 26 this is where Liquid Glass (`.glassEffect`) would be applied;
-    /// today, and on the project's current SDK, it renders a standard material
-    /// with a hairline border so the code builds and looks native everywhere.
-    /// When the build SDK gains the macOS 26 glass APIs, add a
-    /// `if #available(macOS 26.0, *)` branch here — no call site needs to change.
-    struct LiquidGlassSurface: ViewModifier {
-        var material: Material
-        var cornerRadius: CGFloat
-        var showBorder: Bool
-
-        public func body(content: Content) -> some View {
-            content
-                .background(material, in: shape)
-                .overlay {
-                    if showBorder {
-                        shape.strokeBorder(Key84DS.Color.separator.opacity(0.6), lineWidth: 1)
-                    }
-                }
-        }
-
-        private var shape: RoundedRectangle {
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        }
-    }
-}
+// MARK: - Liquid Glass-ready surfaces
 
 public extension View {
-    /// Apply a Liquid Glass-ready surface (material today, glass on macOS 26).
-    func liquidGlassSurface(
-        _ material: Material = Key84DS.Surface.card,
-        cornerRadius: CGFloat = Key84DS.Radius.card,
-        border: Bool = true
-    ) -> some View {
-        modifier(Key84DS.LiquidGlassSurface(
-            material: material, cornerRadius: cornerRadius, showBorder: border
-        ))
-    }
-
-    // MARK: Named surface aliases (call-site clarity, all Liquid Glass-ready)
-
-    /// Explicit alias of `liquidGlassSurface` for readable call sites.
-    func key84LiquidGlassSurface(
-        _ material: Material = Key84DS.Surface.card,
-        cornerRadius: CGFloat = Key84DS.Radius.card,
-        border: Bool = true
-    ) -> some View {
-        liquidGlassSurface(material, cornerRadius: cornerRadius, border: border)
-    }
-
-    /// Grouped card surface (material card + hairline border).
+    /// Grouped card surface: subtle material + hairline separator border.
+    ///
+    /// This is where Liquid Glass (`.glassEffect`) would be applied on macOS 26;
+    /// today it renders `.regularMaterial` so the code builds and looks native
+    /// everywhere. When the build SDK gains the glass APIs, add a
+    /// `if #available(macOS 26.0, *)` branch here — no call site changes.
     func key84CardSurface(cornerRadius: CGFloat = Key84DS.Radius.card) -> some View {
-        liquidGlassSurface(Key84DS.Surface.card, cornerRadius: cornerRadius)
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        return self
+            .background(Key84DS.Surface.card, in: shape)
+            .overlay(shape.strokeBorder(Key84DS.Color.separator.opacity(0.35), lineWidth: 0.5))
     }
 
     /// Translucent sidebar background.
-    func key84SidebarMaterial() -> some View {
+    func key84SidebarSurface() -> some View {
         background(Key84DS.Surface.sidebar)
-    }
-
-    /// Window content background.
-    func key84WindowBackground() -> some View {
-        background(Key84DS.Surface.window)
     }
 }
 
-// MARK: - Card / group surfaces
+// MARK: - Card container
 
 /// A rounded, material-backed card. The lowest-level surface component.
 public struct Key84GlassCard<Content: View>: View {
     private var padding: CGFloat
-    private var cornerRadius: CGFloat
     private var content: Content
 
-    public init(
-        padding: CGFloat = Key84DS.Layout.cardPadding,
-        cornerRadius: CGFloat = Key84DS.Radius.card,
-        @ViewBuilder content: () -> Content
-    ) {
+    public init(padding: CGFloat = Key84DS.Layout.cardPadding, @ViewBuilder content: () -> Content) {
         self.padding = padding
-        self.cornerRadius = cornerRadius
         self.content = content()
     }
 
     public var body: some View {
         content
-            .padding(padding)
-            .liquidGlassSurface(Key84DS.Surface.card, cornerRadius: cornerRadius)
+            .padding(.horizontal, padding)
+            .padding(.vertical, padding - 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .key84CardSurface()
     }
 }
 
-/// A titled group of setting rows rendered as a single card, with dividers
-/// automatically inserted between rows (last divider omitted). Mirrors the
-/// grouped look of macOS System Settings.
+// MARK: - Section header
+
+/// A small, quiet section label shown above a group (outside the card).
+public struct Key84SectionHeader: View {
+    private let title: String
+    public init(_ title: String) { self.title = title }
+    public var body: some View {
+        Text(title)
+            .font(Key84DS.Typography.sectionLabel)
+            .foregroundStyle(Key84DS.Color.textSecondary)
+    }
+}
+
+// MARK: - Settings group (native grouped list)
+
+/// A titled group of setting rows rendered as a single native-looking card,
+/// with inset dividers between rows. The title sits outside the card.
 public struct Key84SettingsGroup<Content: View>: View {
     private var title: String?
     private var footer: String?
     private var content: Content
 
-    public init(
-        _ title: String? = nil,
-        footer: String? = nil,
-        @ViewBuilder content: () -> Content
-    ) {
+    public init(_ title: String? = nil, footer: String? = nil, @ViewBuilder content: () -> Content) {
         self.title = title
         self.footer = footer
         self.content = content()
@@ -350,13 +266,9 @@ public struct Key84SettingsGroup<Content: View>: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: Key84DS.Spacing.sm) {
-            if let title {
-                Key84SectionHeader(title)
-            }
-            _VariadicView.Tree(DividedRows()) {
-                content
-            }
-            .liquidGlassSurface(Key84DS.Surface.card, cornerRadius: Key84DS.Radius.card)
+            if let title { Key84SectionHeader(title) }
+            _VariadicView.Tree(DividedRows()) { content }
+                .key84CardSurface()
             if let footer {
                 Text(footer)
                     .font(Key84DS.Typography.caption)
@@ -367,7 +279,7 @@ public struct Key84SettingsGroup<Content: View>: View {
         }
     }
 
-    /// Lays rows out vertically and inserts an inset divider between them.
+    /// Lays rows out vertically with an inset divider between them.
     private struct DividedRows: _VariadicView_MultiViewRoot {
         @ViewBuilder
         func body(children: _VariadicView.Children) -> some View {
@@ -376,8 +288,7 @@ public struct Key84SettingsGroup<Content: View>: View {
                 ForEach(children) { child in
                     child
                     if child.id != last {
-                        Divider()
-                            .padding(.leading, Key84DS.Layout.cardPadding)
+                        Divider().padding(.leading, Key84DS.Layout.dividerInset)
                     }
                 }
             }
@@ -385,51 +296,30 @@ public struct Key84SettingsGroup<Content: View>: View {
     }
 }
 
-/// A section header label, e.g. "Tổng quan".
-public struct Key84SectionHeader: View {
-    private let title: String
-    public init(_ title: String) { self.title = title }
-    public var body: some View {
-        Text(title)
-            .font(Key84DS.Typography.sectionTitle)
-            .foregroundStyle(Key84DS.Color.textSecondary)
-            .textCase(nil)
-    }
-}
-
 // MARK: - Setting rows
 
-/// The base setting row: optional icon, title, optional subtitle and a trailing
-/// control. All higher-level rows compose this for a consistent height/layout.
+/// The base setting row: title, optional subtitle and a trailing control.
+/// No decorative icons — native System Settings relies on text + control.
 public struct Key84SettingRow<Control: View>: View {
     private let title: String
     private let subtitle: String?
-    private let systemIcon: String?
     private let isEnabled: Bool
     private let control: Control
 
     public init(
         _ title: String,
         subtitle: String? = nil,
-        systemIcon: String? = nil,
         isEnabled: Bool = true,
         @ViewBuilder control: () -> Control
     ) {
         self.title = title
         self.subtitle = subtitle
-        self.systemIcon = systemIcon
         self.isEnabled = isEnabled
         self.control = control()
     }
 
     public var body: some View {
         HStack(alignment: .center, spacing: Key84DS.Spacing.md) {
-            if let systemIcon {
-                Image(systemName: systemIcon)
-                    .font(.system(size: Key84DS.Layout.iconRow))
-                    .foregroundStyle(Key84DS.Color.accent)
-                    .frame(width: Key84DS.Layout.iconRow + 6)
-            }
             VStack(alignment: .leading, spacing: Key84DS.Spacing.xxs) {
                 Text(title)
                     .font(Key84DS.Typography.rowTitle)
@@ -441,80 +331,65 @@ public struct Key84SettingRow<Control: View>: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            Spacer(minLength: Key84DS.Spacing.md)
+            Spacer(minLength: Key84DS.Spacing.lg)
             control
         }
-        .padding(.horizontal, Key84DS.Layout.cardPadding)
-        .padding(.vertical, Key84DS.Layout.rowVPadding)
-        .frame(minHeight: Key84DS.Layout.rowMinHeight)
+        .padding(.horizontal, Key84DS.Layout.rowHPadding)
+        .frame(minHeight: subtitle == nil ? Key84DS.Layout.rowMinHeight : Key84DS.Layout.rowMinHeightSubtitle)
         .opacity(isEnabled ? 1 : 0.45)
         .allowsHitTesting(isEnabled)
-        .contentShape(Rectangle())
     }
 }
 
-/// A row with a native toggle, accent-tinted.
+/// A row with a native toggle. Default system tint (no forced accent).
 public struct Key84ToggleRow: View {
     private let title: String
     private let subtitle: String?
-    private let systemIcon: String?
     @Binding private var isOn: Bool
     private let isEnabled: Bool
 
-    public init(
-        _ title: String,
-        subtitle: String? = nil,
-        systemIcon: String? = nil,
-        isOn: Binding<Bool>,
-        isEnabled: Bool = true
-    ) {
+    public init(_ title: String, subtitle: String? = nil, isOn: Binding<Bool>, isEnabled: Bool = true) {
         self.title = title
         self.subtitle = subtitle
-        self.systemIcon = systemIcon
         self._isOn = isOn
         self.isEnabled = isEnabled
     }
 
     public var body: some View {
-        Key84SettingRow(title, subtitle: subtitle, systemIcon: systemIcon, isEnabled: isEnabled) {
+        Key84SettingRow(title, subtitle: subtitle, isEnabled: isEnabled) {
             Toggle("", isOn: $isOn)
                 .labelsHidden()
                 .toggleStyle(.switch)
-                .tint(Key84DS.Color.accent)
+                .controlSize(.small)
                 .disabled(!isEnabled)
         }
     }
 }
 
-/// A row hosting a native menu-style `Picker`. The picker content is supplied by
-/// the caller (e.g. a set of `Text(...).tag(...)`).
+/// A row hosting a native menu-style `Picker`.
 public struct Key84PickerRow<SelectionValue: Hashable, Content: View>: View {
     private let title: String
     private let subtitle: String?
-    private let systemIcon: String?
     @Binding private var selection: SelectionValue
     private let content: Content
 
     public init(
         _ title: String,
         subtitle: String? = nil,
-        systemIcon: String? = nil,
         selection: Binding<SelectionValue>,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
-        self.systemIcon = systemIcon
         self._selection = selection
         self.content = content()
     }
 
     public var body: some View {
-        Key84SettingRow(title, subtitle: subtitle, systemIcon: systemIcon) {
+        Key84SettingRow(title, subtitle: subtitle) {
             Picker("", selection: $selection) { content }
                 .labelsHidden()
                 .pickerStyle(.menu)
-                .tint(Key84DS.Color.accent)
                 .fixedSize()
         }
     }
@@ -524,23 +399,16 @@ public struct Key84PickerRow<SelectionValue: Hashable, Content: View>: View {
 public struct Key84InfoRow: View {
     private let title: String
     private let subtitle: String?
-    private let systemIcon: String?
     private let value: String
 
-    public init(
-        _ title: String,
-        subtitle: String? = nil,
-        systemIcon: String? = nil,
-        value: String
-    ) {
+    public init(_ title: String, subtitle: String? = nil, value: String) {
         self.title = title
         self.subtitle = subtitle
-        self.systemIcon = systemIcon
         self.value = value
     }
 
     public var body: some View {
-        Key84SettingRow(title, subtitle: subtitle, systemIcon: systemIcon) {
+        Key84SettingRow(title, subtitle: subtitle) {
             Text(value)
                 .font(Key84DS.Typography.rowTitle)
                 .foregroundStyle(Key84DS.Color.textSecondary)
@@ -548,39 +416,32 @@ public struct Key84InfoRow: View {
     }
 }
 
-/// A tappable navigation row with a trailing chevron and hover highlight.
+/// A tappable navigation row with a trailing chevron and quiet hover.
 public struct Key84NavigationRow: View {
     private let title: String
     private let subtitle: String?
-    private let systemIcon: String?
     private let action: () -> Void
     @State private var isHovering = false
+    @Environment(\.colorScheme) private var scheme
 
-    public init(
-        _ title: String,
-        subtitle: String? = nil,
-        systemIcon: String? = nil,
-        action: @escaping () -> Void
-    ) {
+    public init(_ title: String, subtitle: String? = nil, action: @escaping () -> Void) {
         self.title = title
         self.subtitle = subtitle
-        self.systemIcon = systemIcon
         self.action = action
     }
 
     public var body: some View {
         Button(action: action) {
-            Key84SettingRow(title, subtitle: subtitle, systemIcon: systemIcon) {
+            Key84SettingRow(title, subtitle: subtitle) {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: Key84DS.Layout.iconSmall, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Key84DS.Color.textTertiary)
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(isHovering ? Key84DS.Color.accentSoft : SwiftUI.Color.clear)
-        .onHover { hovering in
-            withAnimation(Key84DS.Animation.hover) { isHovering = hovering }
-        }
+        .background(isHovering ? Key84DS.Color.neutralFill(scheme, selected: false) : SwiftUI.Color.clear)
+        .onHover { hovering in withAnimation(Key84DS.Animation.hover) { isHovering = hovering } }
     }
 }
 
@@ -591,29 +452,24 @@ public struct Key84SidebarItemModel: Identifiable, Hashable {
     public let id: String
     public let title: String
     public let systemIcon: String
-    public var badge: String?
 
-    public init(id: String, title: String, systemIcon: String, badge: String? = nil) {
+    public init(id: String, title: String, systemIcon: String) {
         self.id = id
         self.title = title
         self.systemIcon = systemIcon
-        self.badge = badge
     }
 }
 
-/// A native-feeling sidebar row with icon, title, optional badge, selection and
-/// hover states.
+/// A quiet, native sidebar row: monochrome icon, title, neutral selection
+/// highlight. Selected icon uses the accent (the one restrained accent cue).
 public struct Key84SidebarItem: View {
     private let model: Key84SidebarItemModel
     private let isSelected: Bool
     private let action: () -> Void
     @State private var isHovering = false
+    @Environment(\.colorScheme) private var scheme
 
-    public init(
-        _ model: Key84SidebarItemModel,
-        isSelected: Bool,
-        action: @escaping () -> Void
-    ) {
+    public init(_ model: Key84SidebarItemModel, isSelected: Bool, action: @escaping () -> Void) {
         self.model = model
         self.isSelected = isSelected
         self.action = action
@@ -621,94 +477,78 @@ public struct Key84SidebarItem: View {
 
     public var body: some View {
         Button(action: action) {
-            HStack(spacing: Key84DS.Spacing.md) {
+            HStack(spacing: 10) {
                 Image(systemName: model.systemIcon)
-                    .font(.system(size: Key84DS.Layout.iconSidebar))
+                    .font(.system(size: Key84DS.Layout.sidebarIconSize))
                     .foregroundStyle(isSelected ? Key84DS.Color.accent : Key84DS.Color.textSecondary)
-                    .frame(width: Key84DS.Layout.iconSidebar + 6)
+                    .frame(width: Key84DS.Layout.sidebarIconWidth, alignment: .center)
                 Text(model.title)
                     .font(Key84DS.Typography.sidebarItem)
                     .foregroundStyle(Key84DS.Color.textPrimary)
                 Spacer(minLength: 0)
-                if let badge = model.badge {
-                    Text(badge)
-                        .font(Key84DS.Typography.badge)
-                        .foregroundStyle(Key84DS.Color.accent)
-                        .padding(.horizontal, Key84DS.Spacing.sm)
-                        .padding(.vertical, Key84DS.Spacing.xxs)
-                        .background(Key84DS.Color.accentSoft, in: Capsule())
-                }
             }
             .padding(.horizontal, Key84DS.Spacing.md)
-            .padding(.vertical, Key84DS.Spacing.sm)
+            .frame(height: Key84DS.Layout.sidebarRowHeight)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .background(rowBackground)
         }
         .buttonStyle(.plain)
-        .onHover { hovering in
-            withAnimation(Key84DS.Animation.hover) { isHovering = hovering }
-        }
+        .onHover { hovering in withAnimation(Key84DS.Animation.hover) { isHovering = hovering } }
     }
 
     @ViewBuilder
     private var rowBackground: some View {
-        let shape = RoundedRectangle(cornerRadius: Key84DS.Radius.row, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Key84DS.Radius.sidebar, style: .continuous)
         if isSelected {
-            shape.fill(Key84DS.Color.sidebarSelection)
+            shape.fill(Key84DS.Color.neutralFill(scheme, selected: true))
         } else if isHovering {
-            shape.fill(Key84DS.Color.accentSoft.opacity(0.5))
+            shape.fill(Key84DS.Color.neutralFill(scheme, selected: false))
         } else {
             shape.fill(SwiftUI.Color.clear)
         }
     }
 }
 
-/// Bottom-of-sidebar app identity area: small 84 badge + name + version.
+/// Bottom-of-sidebar app identity area: small badge + name + version.
 public struct Key84SidebarFooter: View {
     private let version: String
     public init(version: String) { self.version = version }
 
     public var body: some View {
         HStack(spacing: Key84DS.Spacing.sm) {
-            Key84AppBadge(size: 22)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("84Key")
-                    .font(Key84DS.Typography.rowTitle.weight(.semibold))
-                Text("Phiên bản \(version)")
-                    .font(Key84DS.Typography.caption)
-                    .foregroundStyle(Key84DS.Color.textSecondary)
-            }
+            Key84AppBadge(size: 18)
+            Text("84Key")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(Key84DS.Color.textPrimary)
+            Text("·")
+                .foregroundStyle(Key84DS.Color.textTertiary)
+            Text("phiên bản \(version)")
+                .font(Key84DS.Typography.caption)
+                .foregroundStyle(Key84DS.Color.textSecondary)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, Key84DS.Spacing.md)
-        .padding(.vertical, Key84DS.Spacing.sm)
+        .padding(.horizontal, Key84DS.Spacing.lg)
+        .padding(.vertical, Key84DS.Spacing.md)
     }
 }
 
-// MARK: - Status / Hero
+// MARK: - Status / badge
 
-/// The square 84Key badge used in the sidebar footer and hero card.
+/// The square 84Key badge. The app badge is the primary place accent appears.
 public struct Key84AppBadge: View {
     private let size: CGFloat
     public init(size: CGFloat = 36) { self.size = size }
 
     public var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.26, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [Key84DS.Color.accent, Key84DS.Color.accent.opacity(0.78)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+        RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
+            .fill(Key84DS.Color.accent)
             .overlay {
                 Text("84")
-                    .font(.system(size: size * 0.42, weight: .bold, design: .rounded))
+                    .font(.system(size: size * 0.40, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
             }
             .frame(width: size, height: size)
-            .shadow(color: Key84DS.Color.accent.opacity(0.30), radius: 4, y: 1)
     }
 }
 
@@ -726,19 +566,14 @@ public enum Key84ChipStyle {
     }
 }
 
-/// A compact status chip, e.g. "Tiếng Việt: Bật" or a shortcut "⌥ Space".
+/// A compact, quiet status chip (e.g. "Tiếng Việt: Bật" or a shortcut "⌘E").
 public struct Key84StatusChip: View {
     private let title: String
     private let systemIcon: String?
     private let style: Key84ChipStyle
     private let monospaced: Bool
 
-    public init(
-        _ title: String,
-        systemIcon: String? = nil,
-        style: Key84ChipStyle = .neutral,
-        monospaced: Bool = false
-    ) {
+    public init(_ title: String, systemIcon: String? = nil, style: Key84ChipStyle = .neutral, monospaced: Bool = false) {
         self.title = title
         self.systemIcon = systemIcon
         self.style = style
@@ -746,24 +581,21 @@ public struct Key84StatusChip: View {
     }
 
     public var body: some View {
-        HStack(spacing: Key84DS.Spacing.xs) {
+        HStack(spacing: 5) {
             if let systemIcon {
-                Image(systemName: systemIcon)
-                    .font(.system(size: Key84DS.Layout.iconSmall, weight: .semibold))
+                Image(systemName: systemIcon).font(.system(size: 11, weight: .semibold))
             }
-            Text(title)
-                .font(monospaced ? Key84DS.Typography.monoShortcut : Key84DS.Typography.badge)
+            Text(title).font(monospaced ? Key84DS.Typography.monoShortcut : Key84DS.Typography.badge)
         }
         .foregroundStyle(style.tint)
         .padding(.horizontal, Key84DS.Spacing.sm)
-        .padding(.vertical, Key84DS.Spacing.xs)
-        .background(Key84DS.Surface.chip, in: Capsule())
-        .overlay(Capsule().strokeBorder(style.tint.opacity(0.25), lineWidth: 1))
+        .padding(.vertical, 3)
+        .background(style.tint.opacity(0.12), in: Capsule())
     }
 }
 
-/// The top hero status card: 84Key badge, headline, status + shortcut chips and
-/// a primary action. Logic is left to the caller; this is presentation only.
+/// Top status summary for the Overview page: small badge, name, status chips
+/// and a restrained bordered action. Presentation only.
 public struct Key84HeroStatusCard: View {
     private let isVietnamese: Bool
     private let shortcut: String
@@ -772,8 +604,8 @@ public struct Key84HeroStatusCard: View {
 
     public init(
         isVietnamese: Bool,
-        shortcut: String = "⌥ Space",
-        primaryActionTitle: String = "Mở thanh menu",
+        shortcut: String = "⌘E",
+        primaryActionTitle: String,
         primaryAction: @escaping () -> Void
     ) {
         self.isVietnamese = isVietnamese
@@ -783,186 +615,97 @@ public struct Key84HeroStatusCard: View {
     }
 
     public var body: some View {
-        HStack(alignment: .center, spacing: Key84DS.Spacing.lg) {
-            Key84AppBadge(size: 52)
+        HStack(alignment: .center, spacing: Key84DS.Spacing.md) {
+            Key84AppBadge(size: 40)
 
             VStack(alignment: .leading, spacing: Key84DS.Spacing.sm) {
-                Text("84Key")
-                    .font(Key84DS.Typography.title)
+                Text("84Key").font(Key84DS.Typography.cardTitle)
                 HStack(spacing: Key84DS.Spacing.sm) {
                     Key84StatusChip(
                         isVietnamese ? "Tiếng Việt: Bật" : "Tiếng Việt: Tắt",
                         systemIcon: isVietnamese ? "checkmark.circle.fill" : "circle",
                         style: isVietnamese ? .success : .neutral
                     )
-                    Key84StatusChip("Phím tắt: \(shortcut)", systemIcon: "command", style: .neutral, monospaced: true)
+                    Key84StatusChip("Phím tắt: \(shortcut)", style: .neutral, monospaced: true)
                 }
             }
 
-            Spacer(minLength: Key84DS.Spacing.md)
+            Spacer(minLength: Key84DS.Spacing.lg)
 
-            Button(action: primaryAction) {
-                Text(primaryActionTitle)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Key84DS.Color.accent)
-            .controlSize(.large)
+            Button(primaryActionTitle, action: primaryAction)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
         }
         .padding(Key84DS.Spacing.lg)
-        .liquidGlassSurface(Key84DS.Surface.bar, cornerRadius: Key84DS.Radius.hero)
-    }
-}
-
-// MARK: - Search field
-
-/// A native-style search field wrapper (used by the future Settings search).
-public struct Key84SearchField: View {
-    private let placeholder: String
-    @Binding private var text: String
-
-    public init(_ placeholder: String = "Tìm kiếm", text: Binding<String>) {
-        self.placeholder = placeholder
-        self._text = text
-    }
-
-    public var body: some View {
-        HStack(spacing: Key84DS.Spacing.sm) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(Key84DS.Color.textSecondary)
-            TextField(placeholder, text: $text)
-                .textFieldStyle(.plain)
-            if !text.isEmpty {
-                Button {
-                    text = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(Key84DS.Color.textTertiary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, Key84DS.Spacing.sm)
-        .padding(.vertical, Key84DS.Spacing.xs)
-        .liquidGlassSurface(Key84DS.Surface.chip, cornerRadius: Key84DS.Radius.row)
+        .key84CardSurface()
     }
 }
 
 // MARK: - Previews
 
 #if DEBUG
-private struct Key84DesignSystemPreview: View {
-    @State private var telex = 0
-    @State private var autoDetect = true
-    @State private var fixSpotlight = true
-    @State private var smartSwitch = false
-    @State private var search = ""
-    @State private var selectedSidebar = "overview"
+private struct Key84ComponentsPreview: View {
+    @State private var pick = 0
+    @State private var on = true
+    @State private var off = false
+    @State private var selected = "overview"
 
-    private let sidebarItems: [Key84SidebarItemModel] = [
-        .init(id: "overview", title: "Tổng quan", systemIcon: "square.grid.2x2"),
+    private let items: [Key84SidebarItemModel] = [
+        .init(id: "overview", title: "Tổng quan", systemIcon: "house"),
         .init(id: "input", title: "Nhập liệu", systemIcon: "keyboard"),
-        .init(id: "vietnamese", title: "Gõ tiếng Việt", systemIcon: "character.book.closed"),
-        .init(id: "smart", title: "Tính năng thông minh", systemIcon: "wand.and.stars", badge: "Mới"),
-        .init(id: "compat", title: "Tương thích", systemIcon: "puzzlepiece.extension"),
-        .init(id: "system", title: "Hệ thống", systemIcon: "gearshape"),
-        .init(id: "shortcuts", title: "Phím tắt", systemIcon: "command"),
-        .init(id: "advanced", title: "Nâng cao", systemIcon: "slider.horizontal.3"),
+        .init(id: "vietnamese", title: "Gõ tiếng Việt", systemIcon: "character.cursor.ibeam"),
     ]
 
     var body: some View {
         HStack(spacing: 0) {
-            // Sidebar
-            VStack(alignment: .leading, spacing: Key84DS.Spacing.xs) {
-                Key84SearchField(text: $search)
-                    .padding(.horizontal, Key84DS.Spacing.sm)
-                    .padding(.top, Key84DS.Spacing.sm)
-                ScrollView {
-                    VStack(spacing: Key84DS.Spacing.xxs) {
-                        ForEach(sidebarItems) { item in
-                            Key84SidebarItem(item, isSelected: selectedSidebar == item.id) {
-                                selectedSidebar = item.id
-                            }
-                        }
-                    }
-                    .padding(.horizontal, Key84DS.Spacing.sm)
-                    .padding(.top, Key84DS.Spacing.sm)
+            VStack(spacing: 2) {
+                ForEach(items) { item in
+                    Key84SidebarItem(item, isSelected: selected == item.id) { selected = item.id }
                 }
-                Divider()
+                Spacer()
                 Key84SidebarFooter(version: "0.1.0")
             }
+            .padding(.horizontal, Key84DS.Layout.sidebarRowInset)
+            .padding(.top, Key84DS.Spacing.sm)
             .frame(width: Key84DS.Layout.sidebarWidth)
-            .background(Key84DS.Surface.sidebar)
+            .key84SidebarSurface()
 
-            // Content
+            Divider()
+
             ScrollView {
-                VStack(alignment: .leading, spacing: Key84DS.Layout.sectionSpacing) {
-                    Key84HeroStatusCard(isVietnamese: true) {}
-
-                    Key84SettingsGroup("Nhập liệu") {
-                        Key84PickerRow("Kiểu gõ", systemIcon: "keyboard", selection: $telex) {
-                            Text("Telex").tag(0)
-                            Text("VNI").tag(1)
-                            Text("Simple Telex").tag(2)
-                        }
-                        Key84InfoRow("Bảng mã", systemIcon: "textformat", value: "Unicode")
+                VStack(alignment: .leading, spacing: Key84DS.Spacing.xl) {
+                    VStack(alignment: .leading, spacing: Key84DS.Spacing.xs) {
+                        Text("Tổng quan").font(Key84DS.Typography.pageTitle)
+                        Text("Trạng thái 84Key và các tuỳ chọn quan trọng nhất.")
+                            .font(Key84DS.Typography.pageSubtitle)
+                            .foregroundStyle(Key84DS.Color.textSecondary)
                     }
-
-                    Key84SettingsGroup(
-                        "Tính năng thông minh",
-                        footer: "Tự động bỏ qua bỏ dấu khi gõ một từ tiếng Anh, không cần chuyển chế độ."
-                    ) {
-                        Key84ToggleRow("Tự động nhận diện tiếng Anh",
-                                       subtitle: "Gõ tiếng Anh tự nhiên trong khi vẫn bật tiếng Việt.",
-                                       systemIcon: "character.cursor.ibeam",
-                                       isOn: $autoDetect)
+                    Key84HeroStatusCard(isVietnamese: true, primaryActionTitle: "Chuyển sang tiếng Anh") {}
+                    Key84SettingsGroup("Cài đặt nhanh") {
+                        Key84ToggleRow("Tự động nhận diện tiếng Anh", isOn: $on)
                         Key84ToggleRow("Sửa lỗi bỏ dấu trong Spotlight",
-                                       systemIcon: "magnifyingglass",
-                                       isOn: $fixSpotlight)
-                        Key84ToggleRow("Phím chuyển thông minh",
-                                       subtitle: "Nhớ ngôn ngữ theo từng ứng dụng.",
-                                       systemIcon: "rectangle.2.swap",
-                                       isOn: $smartSwitch)
-                    }
-
-                    Key84SettingsGroup("Hệ thống") {
-                        Key84NavigationRow("Quyền Trợ năng", subtitle: "Đã cấp quyền", systemIcon: "lock.shield") {}
-                        Key84InfoRow("Chuyển ngôn ngữ", systemIcon: "globe", value: "⌥ Space")
+                                       subtitle: "Xử lý riêng Spotlight để tránh lỗi mất backspace.", isOn: $off)
+                        Key84PickerRow("Kiểu gõ", selection: $pick) {
+                            Text("Telex").tag(0); Text("VNI").tag(1)
+                        }
+                        Key84InfoRow("Phím tắt chuyển nhanh", value: "⌘E")
                     }
                 }
-                .padding(Key84DS.Spacing.xl)
                 .frame(maxWidth: Key84DS.Layout.contentMaxWidth, alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, Key84DS.Layout.detailTopPadding)
+                .padding(.horizontal, Key84DS.Layout.detailHorizontalPadding)
             }
-            .background(Key84DS.Surface.window)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(width: Key84DS.Layout.windowMinWidth, height: Key84DS.Layout.windowMinHeight)
+        .frame(width: Key84DS.Layout.windowIdealWidth, height: Key84DS.Layout.windowIdealHeight)
     }
 }
 
-#Preview("Mock Settings Pane") {
-    Key84DesignSystemPreview()
+#Preview("Settings (light)") {
+    Key84ComponentsPreview().preferredColorScheme(.light)
 }
 
-#Preview("Components") {
-    @Previewable @State var on = true
-    @Previewable @State var pick = 0
-    return VStack(alignment: .leading, spacing: Key84DS.Spacing.lg) {
-        Key84HeroStatusCard(isVietnamese: false) {}
-        Key84SettingsGroup("Ví dụ") {
-            Key84ToggleRow("Toggle row", subtitle: "Có phụ đề", isOn: $on)
-            Key84PickerRow("Picker row", selection: $pick) {
-                Text("Một").tag(0); Text("Hai").tag(1)
-            }
-            Key84InfoRow("Info row", value: "Giá trị")
-            Key84NavigationRow("Navigation row") {}
-        }
-        HStack {
-            Key84StatusChip("Tiếng Việt: Bật", systemIcon: "checkmark.circle.fill", style: .success)
-            Key84StatusChip("⌥ Space", style: .neutral, monospaced: true)
-        }
-    }
-    .padding(Key84DS.Spacing.xl)
-    .frame(width: 560)
-    .background(Key84DS.Surface.window)
+#Preview("Settings (dark)") {
+    Key84ComponentsPreview().preferredColorScheme(.dark)
 }
 #endif
