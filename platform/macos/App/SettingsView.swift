@@ -20,7 +20,6 @@ struct SettingsView: View {
                 )
         } detail: {
             SettingsDetail(section: selection ?? .overview, settings: settings, app: app)
-                .navigationTitle("84Key Settings")
         }
         .frame(
             minWidth: Key84DS.Layout.windowMinWidth,

@@ -3,8 +3,10 @@
 //  84Key
 //
 //  Native macOS Settings sidebar: a `List(selection:)` with `.listStyle(.sidebar)`
-//  so macOS draws the real selected-row state (no custom highlight), plus a
-//  quiet app-identity footer below the list.
+//  so macOS draws the real selected-row state and the translucent sidebar
+//  material (Liquid Glass on macOS 26). The app-identity footer is attached via
+//  `safeAreaInset` so the List remains the full-height native sidebar rather than
+//  being boxed inside a plain container.
 //
 
 import SwiftUI
@@ -13,16 +15,14 @@ struct SettingsSidebar: View {
     @Binding var selection: SettingsSection?
 
     var body: some View {
-        VStack(spacing: 0) {
-            List(selection: $selection) {
-                ForEach(SettingsSection.allCases) { section in
-                    Label(section.title, systemImage: section.systemImage)
-                        .tag(section)
-                }
+        List(selection: $selection) {
+            ForEach(SettingsSection.allCases) { section in
+                Label(section.title, systemImage: section.systemImage)
+                    .tag(section)
             }
-            .listStyle(.sidebar)
-
-            Divider()
+        }
+        .listStyle(.sidebar)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             SidebarIdentityFooter()
         }
     }
@@ -31,19 +31,22 @@ struct SettingsSidebar: View {
 /// Quiet identity at the bottom of the sidebar: tiny badge, name, version.
 private struct SidebarIdentityFooter: View {
     var body: some View {
-        HStack(spacing: 8) {
-            Key84AppBadge(size: 18)
-            Text("84Key")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Key84DS.Color.textPrimary)
-            Text("·").foregroundStyle(.tertiary)
-            Text(Key84Bundle.shortVersion)
-                .font(Key84DS.Typography.caption)
-                .foregroundStyle(Key84DS.Color.textSecondary)
-            Spacer(minLength: 0)
+        VStack(spacing: 0) {
+            Divider()
+            HStack(spacing: 8) {
+                Key84AppBadge(size: 18)
+                Text("84Key")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Key84DS.Color.textPrimary)
+                Text("·").foregroundStyle(.tertiary)
+                Text(Key84Bundle.shortVersion)
+                    .font(Key84DS.Typography.caption)
+                    .foregroundStyle(Key84DS.Color.textSecondary)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
     }
 }
 

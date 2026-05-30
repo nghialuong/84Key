@@ -2,66 +2,41 @@
 //  SettingsSections.swift
 //  84Key
 //
-//  The main-content pages for each Settings section, built from the 84Key design
-//  system and wired to the real `AppSettings` / `AppController`. No engine,
-//  InputController or settings-persistence behaviour is changed here — every
-//  control binds to an existing property.
+//  The detail panes, built from native `Form { Section } .formStyle(.grouped)`
+//  so each page renders exactly like a macOS System Settings pane (native group
+//  backgrounds, dividers, row heights, controls) and adopts the system look —
+//  including Liquid Glass on macOS 26 — automatically.
 //
-//  Styling is deliberately restrained and native (no decorative row icons, no
-//  forced accent), with leading-aligned content like macOS System Settings.
+//  Every control binds to the existing `AppSettings.shared` / `AppController`,
+//  so persistence and the engine push-through are unchanged.
 //
 
 import SwiftUI
 
-// MARK: - Page scaffold
-
-/// Standard page chrome: a title + subtitle header above a width-capped,
-/// leading-aligned, scrollable content column.
-struct SettingsPage<Content: View>: View {
-    let section: SettingsSection
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Key84DS.Layout.sectionSpacing) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(section.title)
-                        .font(Key84DS.Typography.pageTitle)
-                    Text(section.subtitle)
-                        .font(Key84DS.Typography.pageSubtitle)
-                        .foregroundStyle(Key84DS.Color.textSecondary)
-                }
-                .padding(.bottom, 8)
-                content
-            }
-            .frame(maxWidth: Key84DS.Layout.contentMaxWidth, alignment: .leading)
-            .padding(.top, Key84DS.Layout.detailTopPadding)
-            .padding(.horizontal, Key84DS.Layout.detailHorizontalPadding)
-            .padding(.bottom, Key84DS.Layout.detailBottomPadding)
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-    }
-}
-
 // MARK: - Detail router
 
-/// Switches the main content to match the selected sidebar section.
+/// Switches the main content to match the selected sidebar section. The section
+/// title becomes the native window/toolbar title.
 struct SettingsDetail: View {
     let section: SettingsSection
     @ObservedObject var settings: AppSettings
     @ObservedObject var app: AppController
 
     var body: some View {
-        switch section {
-        case .overview:      OverviewPage(settings: settings, app: app)
-        case .input:         InputPage(settings: settings)
-        case .vietnamese:    VietnamesePage(settings: settings)
-        case .smart:         SmartPage(settings: settings)
-        case .compatibility: CompatibilityPage(settings: settings)
-        case .system:        SystemPage(settings: settings)
-        case .shortcuts:     ShortcutsPage()
-        case .advanced:      AdvancedPage(app: app)
+        Group {
+            switch section {
+            case .overview:      OverviewPage(settings: settings, app: app)
+            case .input:         InputPage(settings: settings)
+            case .vietnamese:    VietnamesePage(settings: settings)
+            case .smart:         SmartPage(settings: settings)
+            case .compatibility: CompatibilityPage(settings: settings)
+            case .system:        SystemPage(settings: settings)
+            case .shortcuts:     ShortcutsPage()
+            case .advanced:      AdvancedPage(app: app)
+            }
         }
+        .formStyle(.grouped)
+        .navigationTitle(section.title)
     }
 }
 
@@ -74,58 +49,50 @@ private struct OverviewPage: View {
     private var isVietnamese: Bool { settings.language == 1 }
 
     var body: some View {
-        SettingsPage(section: .overview) {
-            Key84SettingsGroup("Trạng thái") {
-                Key84SettingRow("84Key", subtitle: isVietnamese ? "Tiếng Việt đang bật" : "Tiếng Việt đang tắt") {
+        Form {
+            Section("Trạng thái") {
+                LabeledContent {
                     Button(isVietnamese ? "Chuyển sang tiếng Anh" : "Chuyển sang tiếng Việt") {
                         // Mirrors the menu-bar action: toggle the engine language.
                         settings.language = isVietnamese ? 0 : 1
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.regular)
+                } label: {
+                    Text("84Key")
+                    Text(isVietnamese ? "Tiếng Việt đang bật" : "Tiếng Việt đang tắt")
                 }
-                Key84InfoRow("Phím tắt chuyển ngôn ngữ", value: "⌥ Space", monospaced: true)
-            }
-
-            PermissionGroup(app: app)
-
-            Key84SettingsGroup("Cài đặt nhanh") {
-                Key84ToggleRow("Tự động nhận diện tiếng Anh", isOn: $settings.autoDetectEnglish)
-                Key84ToggleRow("Sửa lỗi bỏ dấu trong Spotlight", isOn: $settings.fixSpotlight)
-                Key84ToggleRow("Phím chuyển thông minh", isOn: $settings.smartSwitchKey)
-                Key84ToggleRow("Khởi động 84Key khi đăng nhập", isOn: $settings.runOnStartup)
-            }
-        }
-    }
-}
-
-/// Accessibility-permission status as a native group row, wired to the real
-/// `AppController` flow. Small green status text when granted; a bordered CTA
-/// when not.
-private struct PermissionGroup: View {
-    @ObservedObject var app: AppController
-
-    var body: some View {
-        Key84SettingsGroup("Quyền truy cập") {
-            Key84SettingRow("Quyền Trợ năng",
-                            subtitle: "84Key cần quyền này để xử lý phím gõ.") {
-                if app.hasPermission {
-                    Label("Đã cấp quyền", systemImage: "checkmark.circle.fill")
-                        .font(Key84DS.Typography.rowSubtitle)
-                        .foregroundStyle(Key84DS.Color.success)
-                } else {
-                    Button("Mở Cài đặt hệ thống") { app.openAccessibilitySettings() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
+                LabeledContent("Phím tắt chuyển ngôn ngữ") {
+                    Text("⌥ Space").font(Key84DS.Typography.mono).foregroundStyle(.secondary)
                 }
             }
-            if !app.hasPermission {
-                Key84SettingRow("Đã cấp quyền nhưng chưa nhận?",
-                                subtitle: "Khởi động lại 84Key để áp dụng quyền mới.") {
-                    Button("Khởi động lại") { app.relaunch() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+
+            Section("Quyền truy cập") {
+                LabeledContent {
+                    if app.hasPermission {
+                        Label("Đã cấp quyền", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(Key84DS.Color.success)
+                            .labelStyle(.titleAndIcon)
+                    } else {
+                        Button("Mở Cài đặt hệ thống") { app.openAccessibilitySettings() }
+                    }
+                } label: {
+                    Text("Quyền Trợ năng")
+                    Text("84Key cần quyền này để xử lý phím gõ.")
                 }
+                if !app.hasPermission {
+                    LabeledContent {
+                        Button("Khởi động lại") { app.relaunch() }
+                    } label: {
+                        Text("Đã cấp quyền nhưng chưa nhận?")
+                        Text("Khởi động lại 84Key để áp dụng quyền mới.")
+                    }
+                }
+            }
+
+            Section("Cài đặt nhanh") {
+                Toggle("Tự động nhận diện tiếng Anh", isOn: $settings.autoDetectEnglish)
+                Toggle("Sửa lỗi bỏ dấu trong Spotlight", isOn: $settings.fixSpotlight)
+                Toggle("Phím chuyển thông minh", isOn: $settings.smartSwitchKey)
+                Toggle("Khởi động 84Key khi đăng nhập", isOn: $settings.runOnStartup)
             }
         }
     }
@@ -137,21 +104,25 @@ private struct InputPage: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
-        SettingsPage(section: .input) {
-            Key84SettingsGroup("Bộ gõ", footer: "Unicode phù hợp với hầu hết ứng dụng hiện đại.") {
-                Key84PickerRow("Kiểu gõ", selection: $settings.inputType) {
+        Form {
+            Section {
+                Picker("Kiểu gõ", selection: $settings.inputType) {
                     Text("Telex").tag(0)
                     Text("VNI").tag(1)
                     Text("Simple Telex 1").tag(2)
                     Text("Simple Telex 2").tag(3)
                 }
-                Key84PickerRow("Bảng mã", selection: $settings.codeTable) {
+                Picker("Bảng mã", selection: $settings.codeTable) {
                     Text("Unicode").tag(0)
                     Text("TCVN3 (ABC)").tag(1)
                     Text("VNI Windows").tag(2)
                     Text("Unicode tổ hợp").tag(3)
                     Text("Vietnamese CP1258").tag(4)
                 }
+            } header: {
+                Text("Bộ gõ")
+            } footer: {
+                Text("Unicode phù hợp với hầu hết ứng dụng hiện đại.")
             }
         }
     }
@@ -163,20 +134,20 @@ private struct VietnamesePage: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
-        SettingsPage(section: .vietnamese) {
-            Key84SettingsGroup("Chính tả") {
-                Key84ToggleRow("Kiểm tra chính tả", isOn: $settings.checkSpelling)
-                Key84ToggleRow("Chính tả hiện đại (oà, uý)", isOn: $settings.modernOrthography)
-                Key84ToggleRow("Bỏ dấu tự do", isOn: $settings.freeMark)
-                Key84ToggleRow("Khôi phục từ nếu sai chính tả", isOn: $settings.restoreIfWrongSpelling)
+        Form {
+            Section("Chính tả") {
+                Toggle("Kiểm tra chính tả", isOn: $settings.checkSpelling)
+                Toggle("Chính tả hiện đại (oà, uý)", isOn: $settings.modernOrthography)
+                Toggle("Bỏ dấu tự do", isOn: $settings.freeMark)
+                Toggle("Khôi phục từ nếu sai chính tả", isOn: $settings.restoreIfWrongSpelling)
             }
 
-            Key84SettingsGroup("Telex nhanh") {
-                Key84ToggleRow("Telex nhanh (cc→ch, gg→gi…)", isOn: $settings.quickTelex)
-                Key84ToggleRow("Phụ âm đầu nhanh (f→ph, j→gi, w→qu)", isOn: $settings.quickStartConsonant)
-                Key84ToggleRow("Phụ âm cuối nhanh (g→ng, h→nh, k→ch)", isOn: $settings.quickEndConsonant)
-                Key84ToggleRow("Cho phép Z / F / W / J là chữ cái", isOn: $settings.allowZFWJ)
-                Key84ToggleRow("Viết hoa chữ cái đầu", isOn: $settings.upperCaseFirstChar)
+            Section("Telex nhanh") {
+                Toggle("Telex nhanh (cc→ch, gg→gi…)", isOn: $settings.quickTelex)
+                Toggle("Phụ âm đầu nhanh (f→ph, j→gi, w→qu)", isOn: $settings.quickStartConsonant)
+                Toggle("Phụ âm cuối nhanh (g→ng, h→nh, k→ch)", isOn: $settings.quickEndConsonant)
+                Toggle("Cho phép Z / F / W / J là chữ cái", isOn: $settings.allowZFWJ)
+                Toggle("Viết hoa chữ cái đầu", isOn: $settings.upperCaseFirstChar)
             }
         }
     }
@@ -188,17 +159,20 @@ private struct SmartPage: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
-        SettingsPage(section: .smart) {
-            Key84SettingsGroup("Tự động") {
-                Key84ToggleRow("Tự động nhận diện tiếng Anh",
-                               subtitle: "Bỏ qua việc bỏ dấu khi gõ từ tiếng Anh trong kiểu Telex, không cần chuyển chế độ.",
-                               isOn: $settings.autoDetectEnglish)
-                Key84ToggleRow("Sửa lỗi bỏ dấu trong Spotlight",
-                               subtitle: "Xử lý riêng Spotlight để tránh lỗi mất backspace khi gõ nhanh.",
-                               isOn: $settings.fixSpotlight)
-                Key84ToggleRow("Phím chuyển thông minh",
-                               subtitle: "Ghi nhớ VI/EN theo từng ứng dụng.",
-                               isOn: $settings.smartSwitchKey)
+        Form {
+            Section("Tự động") {
+                Toggle(isOn: $settings.autoDetectEnglish) {
+                    Text("Tự động nhận diện tiếng Anh")
+                    Text("Bỏ qua việc bỏ dấu khi gõ từ tiếng Anh trong kiểu Telex, không cần chuyển chế độ.")
+                }
+                Toggle(isOn: $settings.fixSpotlight) {
+                    Text("Sửa lỗi bỏ dấu trong Spotlight")
+                    Text("Xử lý riêng Spotlight để tránh lỗi mất backspace khi gõ nhanh.")
+                }
+                Toggle(isOn: $settings.smartSwitchKey) {
+                    Text("Phím chuyển thông minh")
+                    Text("Ghi nhớ VI/EN theo từng ứng dụng.")
+                }
             }
         }
     }
@@ -210,14 +184,14 @@ private struct CompatibilityPage: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
-        SettingsPage(section: .compatibility) {
-            Key84SettingsGroup("Ứng dụng") {
-                Key84ToggleRow("Dùng gõ tắt (text expansion)", isOn: $settings.useMacro)
-                Key84ToggleRow("Sửa lỗi gợi ý trên thanh địa chỉ trình duyệt",
-                               subtitle: "Chỉ bật nếu bạn gặp lỗi gợi ý hoặc ký tự lạ trong thanh địa chỉ.",
-                               isOn: $settings.fixRecommendBrowser)
-                Key84ToggleRow("Tắt tiếng Việt với bố cục bàn phím không phải tiếng Anh",
-                               isOn: $settings.otherLanguage)
+        Form {
+            Section("Ứng dụng") {
+                Toggle("Dùng gõ tắt (text expansion)", isOn: $settings.useMacro)
+                Toggle(isOn: $settings.fixRecommendBrowser) {
+                    Text("Sửa lỗi gợi ý trên thanh địa chỉ trình duyệt")
+                    Text("Chỉ bật nếu bạn gặp lỗi gợi ý hoặc ký tự lạ trong thanh địa chỉ.")
+                }
+                Toggle("Tắt tiếng Việt với bố cục bàn phím không phải tiếng Anh", isOn: $settings.otherLanguage)
             }
         }
     }
@@ -229,14 +203,16 @@ private struct SystemPage: View {
     @ObservedObject var settings: AppSettings
 
     var body: some View {
-        SettingsPage(section: .system) {
-            Key84SettingsGroup("Khởi động") {
-                Key84ToggleRow("Khởi động 84Key khi đăng nhập", isOn: $settings.runOnStartup)
+        Form {
+            Section("Khởi động") {
+                Toggle("Khởi động 84Key khi đăng nhập", isOn: $settings.runOnStartup)
             }
 
-            Key84SettingsGroup("Chuyển ngôn ngữ") {
-                Key84InfoRow("Chuyển ngôn ngữ", value: "Bấm vào mục VI/EN trên thanh menu")
-                Key84InfoRow("Phím tắt chuyển nhanh", value: "⌥ Space", monospaced: true)
+            Section("Chuyển ngôn ngữ") {
+                LabeledContent("Chuyển ngôn ngữ", value: "Bấm vào mục VI/EN trên thanh menu")
+                LabeledContent("Phím tắt chuyển nhanh") {
+                    Text("⌥ Space").font(Key84DS.Typography.mono).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -246,11 +222,18 @@ private struct SystemPage: View {
 
 private struct ShortcutsPage: View {
     var body: some View {
-        SettingsPage(section: .shortcuts) {
-            Key84SettingsGroup("Phím tắt hiện tại",
-                               footer: "Tùy chỉnh phím tắt sẽ được hỗ trợ trong bản sau.") {
-                Key84InfoRow("Chuyển VI/EN", value: "⌥ Space", monospaced: true)
-                Key84InfoRow("Mở Cài đặt", value: "⌘ ,", monospaced: true)
+        Form {
+            Section {
+                LabeledContent("Chuyển VI/EN") {
+                    Text("⌥ Space").font(Key84DS.Typography.mono).foregroundStyle(.secondary)
+                }
+                LabeledContent("Mở Cài đặt") {
+                    Text("⌘ ,").font(Key84DS.Typography.mono).foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Phím tắt hiện tại")
+            } footer: {
+                Text("Tùy chỉnh phím tắt sẽ được hỗ trợ trong bản sau.")
             }
         }
     }
@@ -262,18 +245,22 @@ private struct AdvancedPage: View {
     @ObservedObject var app: AppController
 
     var body: some View {
-        SettingsPage(section: .advanced) {
-            Key84SettingsGroup("Quyền riêng tư",
-                               footer: "84Key xử lý gõ hoàn toàn trên thiết bị, không gửi nội dung bạn gõ ra ngoài.") {
-                Key84InfoRow("Xử lý cục bộ", value: "Bật")
+        Form {
+            Section {
+                LabeledContent("Xử lý cục bộ", value: "Bật")
+            } header: {
+                Text("Quyền riêng tư")
+            } footer: {
+                Text("84Key xử lý gõ hoàn toàn trên thiết bị, không gửi nội dung bạn gõ ra ngoài.")
             }
 
-            Key84SettingsGroup("Chẩn đoán") {
-                Key84InfoRow("Phiên bản", value: Key84Bundle.shortVersion)
-                Key84SettingRow("Khởi động lại 84Key",
-                                subtitle: "Áp dụng lại quyền Trợ năng sau khi cấp quyền.") {
+            Section("Chẩn đoán") {
+                LabeledContent("Phiên bản", value: Key84Bundle.shortVersion)
+                LabeledContent {
                     Button("Khởi động lại") { app.relaunch() }
-                        .controlSize(.small)
+                } label: {
+                    Text("Khởi động lại 84Key")
+                    Text("Áp dụng lại quyền Trợ năng sau khi cấp quyền.")
                 }
             }
         }
