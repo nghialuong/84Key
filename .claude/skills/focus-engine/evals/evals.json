@@ -1,0 +1,44 @@
+{
+  "skill_name": "focus-engine",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Review this SwiftUI focus plan for an iPadOS form and command menu: every TextField uses its own Bool @FocusState, two fields reuse the same enum case, the screen sets several defaultFocus modifiers, and toolbar commands read a selected document from global app state. Give concise corrected guidance with Swift where useful.",
+      "expected_output": "A correction-focused answer that uses one optional Hashable focus state for multiple fields, avoids ambiguous focus bindings, picks one default target or scoped default, and uses focused scene values for command/menu state.",
+      "files": [],
+      "assertions": [
+        "Recommends one optional Hashable enum @FocusState for multiple focus targets rather than separate competing Bool focus states.",
+        "Explains that reusing the same focus enum value across multiple fields is ambiguous and should be avoided.",
+        "Recommends one clear default focus target or a scoped default rather than several competing defaultFocus modifiers.",
+        "Uses focusedSceneValue or focused values for scene/menu/toolbar actions that depend on the current focused content.",
+        "Keeps accessibility focus concerns out of the answer except as a handoff to ios-accessibility if needed."
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "A tvOS SwiftUI media screen has a left sidebar, an uneven poster grid, and a row of custom card views. The team wants to handle Siri Remote swipes manually, make only the currently visible cards tappable by gestures, and add UIFocusGuide everywhere. Review the focus plan and suggest the right routing/debugging approach.",
+      "expected_output": "A tvOS-focused review that relies on the focus engine, makes actions reachable via focus plus select, uses semantic controls and focusSection for uneven SwiftUI regions before UIKit guides, and reserves UIFocusGuide/UIFocusDebugger for custom UIKit routing/debugging.",
+      "files": [],
+      "assertions": [
+        "States that tvOS actions must be reachable through focus movement and select or activation, not touch-only gestures.",
+        "Explains that the focus engine controls directional movement and should not be replaced with manual swipe routing for normal UI navigation.",
+        "Recommends semantic Button controls or explicit focusable custom controls for interactive cards.",
+        "Recommends focusSection() for uneven SwiftUI sidebar/grid regions before reaching for UIKit UIFocusGuide.",
+        "Uses UIFocusGuide only for UIKit or custom geometry gaps and mentions UIFocusDebugger as an LLDB debugging aid."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I'm making a visionOS RealityKit scene and want gaze to move SwiftUI focus between floating controls, while InputTargetComponent and HoverEffectComponent make 3D entities part of the focus system. What should I change, and where should accessibility-specific focus guidance go?",
+      "expected_output": "A boundary-aware visionOS answer that separates connected-device focus from gaze hover, frames RealityKit input and hover components as interaction affordances rather than focus-system APIs, and routes VoiceOver/Switch Control details to ios-accessibility.",
+      "files": [],
+      "assertions": [
+        "States that visionOS gaze hover is not the focus system; connected devices such as keyboards or game controllers use focus navigation.",
+        "Frames InputTargetComponent plus CollisionComponent as enabling RealityKit entities to receive system input.",
+        "Frames HoverEffectComponent as hover feedback for gaze, direct touch, or pointer hover, not focus.",
+        "Does not claim that gaze should programmatically move SwiftUI @FocusState between controls.",
+        "Routes VoiceOver, Switch Control, or accessibility-specific focus details to the ios-accessibility skill."
+      ]
+    }
+  ]
+}
