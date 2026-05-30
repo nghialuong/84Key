@@ -164,11 +164,14 @@ public extension Key84DS {
 public extension Key84DS {
     /// Window / pane geometry. Tuned to feel spacious, like System Settings.
     enum Layout {
-        public static let windowMinWidth:  CGFloat = 760
-        public static let windowMinHeight: CGFloat = 560
-        public static let sidebarWidth:    CGFloat = 220
-        public static let sidebarMinWidth: CGFloat = 200
-        public static let contentMaxWidth: CGFloat = 640
+        public static let windowMinWidth:    CGFloat = 980
+        public static let windowMinHeight:   CGFloat = 680
+        public static let windowIdealWidth:  CGFloat = 1100
+        public static let windowIdealHeight: CGFloat = 760
+        public static let sidebarWidth:      CGFloat = 248
+        public static let sidebarMinWidth:   CGFloat = 240
+        public static let sidebarMaxWidth:   CGFloat = 280
+        public static let contentMaxWidth:   CGFloat = 640
 
         public static let cardPadding:     CGFloat = 16
         public static let rowMinHeight:    CGFloat = 44
@@ -273,6 +276,32 @@ public extension View {
         modifier(Key84DS.LiquidGlassSurface(
             material: material, cornerRadius: cornerRadius, showBorder: border
         ))
+    }
+
+    // MARK: Named surface aliases (call-site clarity, all Liquid Glass-ready)
+
+    /// Explicit alias of `liquidGlassSurface` for readable call sites.
+    func key84LiquidGlassSurface(
+        _ material: Material = Key84DS.Surface.card,
+        cornerRadius: CGFloat = Key84DS.Radius.card,
+        border: Bool = true
+    ) -> some View {
+        liquidGlassSurface(material, cornerRadius: cornerRadius, border: border)
+    }
+
+    /// Grouped card surface (material card + hairline border).
+    func key84CardSurface(cornerRadius: CGFloat = Key84DS.Radius.card) -> some View {
+        liquidGlassSurface(Key84DS.Surface.card, cornerRadius: cornerRadius)
+    }
+
+    /// Translucent sidebar background.
+    func key84SidebarMaterial() -> some View {
+        background(Key84DS.Surface.sidebar)
+    }
+
+    /// Window content background.
+    func key84WindowBackground() -> some View {
+        background(Key84DS.Surface.window)
     }
 }
 

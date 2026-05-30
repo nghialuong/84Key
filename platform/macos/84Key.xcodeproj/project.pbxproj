@@ -12,11 +12,13 @@
 		24482B6F1C2BDD94A2A8B5BB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0467AC75FAAB4925903F244A /* AppDelegate.swift */; };
 		2F799233066A611BD2D35EF1 /* ConvertTool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = EC8DD8E572F674D0574F9183 /* ConvertTool.cpp */; };
 		38584869C1388E5ECB009D3D /* InputController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 76D6397CA6F9E5BE642D9381 /* InputController.mm */; };
+		3E72073BB0917EF848427AF3 /* SettingsSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4AD47A4A02BAFEC80F14A96 /* SettingsSidebar.swift */; };
 		41D87BA7D7072581BF9463C0 /* Macro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFF6DF92F2B0194966CF7AF4 /* Macro.cpp */; };
 		5499C2FF468494F47AC1F930 /* AppController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AE3B922AED954F8DF4AA548 /* AppController.swift */; };
 		5ABED8A7FDA6CF03D831D186 /* EngineGlobals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2EC8E0C2A29EBDA375D5EFBE /* EngineGlobals.cpp */; };
 		6201415A13C08077BFBFDC20 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B32E1258BBD63E72651EF8 /* OnboardingView.swift */; };
 		6C42FBF4A2F087DE19426F82 /* EnglishDetect.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 00FC97C7077F9DAD49EA6DFC /* EnglishDetect.cpp */; };
+		8E7C668F0BB9B46253675301 /* SettingsSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586E2B4C7304694B36D8EF54 /* SettingsSections.swift */; };
 		8F73012CC3DFDAAB300B1872 /* SmartSwitchKey.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C4CED1C1B3235F27427C4669 /* SmartSwitchKey.cpp */; };
 		A933E9610FA75C8B430DFD8E /* Vietnamese.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7DDF1112BCEC0149CAEDA648 /* Vietnamese.cpp */; };
 		ADA64D2E1771227268068991 /* viet_telex.dat in Resources */ = {isa = PBXBuildFile; fileRef = D8BEC7A253C787068962FAA9 /* viet_telex.dat */; };
@@ -25,6 +27,7 @@
 		E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1979D9679B703249C62E9D1E /* SettingsView.swift */; };
 		E8FD34430938B6CAACDAE575 /* Engine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = A5CD4CD3DF72A626E05278DA /* Engine.cpp */; };
 		EBF663A0A17D0B69682218C0 /* LoginItemManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */; };
+		F7A51BFBC48E88C2BF65CA2A /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5187676D30AB50FC7BF335B /* SettingsModels.swift */; };
 		FA2BAB7610494CFF190F1911 /* english_words.dat in Resources */ = {isa = PBXBuildFile; fileRef = 04053157DF1EB0A4557176D9 /* english_words.dat */; };
 		FB9015AE1BB0AECCEFA40136 /* Key84App.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBF8323C28336218318DCF13 /* Key84App.swift */; };
 /* End PBXBuildFile section */
@@ -41,6 +44,7 @@
 		1979D9679B703249C62E9D1E /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		24FC4ACE92AE9A1274535281 /* win32.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = win32.h; sourceTree = "<group>"; };
 		2EC8E0C2A29EBDA375D5EFBE /* EngineGlobals.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = EngineGlobals.cpp; sourceTree = "<group>"; };
+		586E2B4C7304694B36D8EF54 /* SettingsSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSections.swift; sourceTree = "<group>"; };
 		5DCEC44C6B70C5FD4886F0DE /* Macro.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Macro.h; sourceTree = "<group>"; };
 		60D093CB51083705780984DA /* Key84-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Key84-Bridging-Header.h"; sourceTree = "<group>"; };
 		62632A0845A507C39162B0B9 /* Vietnamese.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Vietnamese.h; sourceTree = "<group>"; };
@@ -56,7 +60,9 @@
 		B263A8F30B54AFF2788F39A1 /* Key84DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Key84DesignSystem.swift; sourceTree = "<group>"; };
 		B7C2317F6838B7B239C3F116 /* DataType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DataType.h; sourceTree = "<group>"; };
 		C4CED1C1B3235F27427C4669 /* SmartSwitchKey.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SmartSwitchKey.cpp; sourceTree = "<group>"; };
+		C5187676D30AB50FC7BF335B /* SettingsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
 		CD7841ED19D6FF43E0C9A3DD /* EnglishDetect.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = EnglishDetect.h; sourceTree = "<group>"; };
+		D4AD47A4A02BAFEC80F14A96 /* SettingsSidebar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSidebar.swift; sourceTree = "<group>"; };
 		D6B47300FB6DA4106005F6F2 /* LoginItemManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginItemManager.swift; sourceTree = "<group>"; };
 		D8BEC7A253C787068962FAA9 /* viet_telex.dat */ = {isa = PBXFileReference; path = viet_telex.dat; sourceTree = "<group>"; };
 		DBF8323C28336218318DCF13 /* Key84App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Key84App.swift; sourceTree = "<group>"; };
@@ -185,6 +191,7 @@
 				72B32E1258BBD63E72651EF8 /* OnboardingView.swift */,
 				1979D9679B703249C62E9D1E /* SettingsView.swift */,
 				A086AF0DA183C1FE734375C8 /* DesignSystem */,
+				FB3D458943629627D20B0D0A /* Settings */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -195,6 +202,16 @@
 				60D093CB51083705780984DA /* Key84-Bridging-Header.h */,
 			);
 			path = Bridge;
+			sourceTree = "<group>";
+		};
+		FB3D458943629627D20B0D0A /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				C5187676D30AB50FC7BF335B /* SettingsModels.swift */,
+				586E2B4C7304694B36D8EF54 /* SettingsSections.swift */,
+				D4AD47A4A02BAFEC80F14A96 /* SettingsSidebar.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		FC17D3B0957B7F2DE02AB63C /* platforms */ = {
@@ -289,6 +306,9 @@
 				EBF663A0A17D0B69682218C0 /* LoginItemManager.swift in Sources */,
 				41D87BA7D7072581BF9463C0 /* Macro.cpp in Sources */,
 				6201415A13C08077BFBFDC20 /* OnboardingView.swift in Sources */,
+				F7A51BFBC48E88C2BF65CA2A /* SettingsModels.swift in Sources */,
+				8E7C668F0BB9B46253675301 /* SettingsSections.swift in Sources */,
+				3E72073BB0917EF848427AF3 /* SettingsSidebar.swift in Sources */,
 				E03FE529DFF609F8F49EC274 /* SettingsView.swift in Sources */,
 				8F73012CC3DFDAAB300B1872 /* SmartSwitchKey.cpp in Sources */,
 				A933E9610FA75C8B430DFD8E /* Vietnamese.cpp in Sources */,
