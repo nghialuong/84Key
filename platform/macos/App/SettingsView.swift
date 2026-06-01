@@ -21,11 +21,11 @@ struct SettingsView: View {
         } detail: {
             SettingsDetail(section: selection ?? .overview, settings: settings, app: app)
         }
+        // Fixed window size: only the sidebar divider is draggable, the window
+        // itself can't be resized (see `.windowResizability(.contentSize)`).
         .frame(
-            minWidth: Key84DS.Layout.windowMinWidth,
-            idealWidth: Key84DS.Layout.windowIdealWidth,
-            minHeight: Key84DS.Layout.windowMinHeight,
-            idealHeight: Key84DS.Layout.windowIdealHeight
+            width: Key84DS.Layout.windowWidth,
+            height: Key84DS.Layout.windowHeight
         )
     }
 }

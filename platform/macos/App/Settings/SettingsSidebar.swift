@@ -3,10 +3,14 @@
 //  84Key
 //
 //  Native macOS Settings sidebar: a `List(selection:)` with `.listStyle(.sidebar)`
-//  so macOS draws the real selected-row state and the translucent sidebar
-//  material (Liquid Glass on macOS 26). The app-identity footer is attached via
-//  `safeAreaInset` so the List remains the full-height native sidebar rather than
-//  being boxed inside a plain container.
+//  inside a `NavigationSplitView`. That combination is what System Settings uses,
+//  so macOS itself renders the translucent sidebar material (real behind-window
+//  vibrancy, Liquid Glass on macOS 26) and the rounded, inset selection row. We
+//  deliberately add NO background of our own — any custom material/color here only
+//  fights the system one and produces the flat off-white "custom" look. The only
+//  brand touch is `.tint`, which recolors the native selection highlight pink
+//  (white text/icon on top, handled by the system). The app-identity footer is
+//  attached via `safeAreaInset` so the List stays the full-height native sidebar.
 //
 
 import SwiftUI
@@ -21,9 +25,8 @@ struct SettingsSidebar: View {
                     .tag(section)
             }
         }
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)        // let the vibrancy show through
-        .key84SidebarVibrancy()                  // real translucent sidebar (glass on macOS 26)
+        .listStyle(.sidebar)                     // native translucent sidebar material
+        .tint(Key84DS.Color.accent)              // brand pink on the native selection row
         .toolbar(removing: .sidebarToggle)       // drop the stray centered toggle button
         .safeAreaInset(edge: .bottom, spacing: 0) {
             SidebarIdentityFooter()

@@ -46,14 +46,6 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_HARDENED_RUNTIME: YES
-        # Sign with a STABLE identity (Apple Development) instead of ad-hoc.
-        # The Accessibility (TCC) grant is keyed to the code signature; ad-hoc
-        # builds get a new cdhash every build, so the grant goes stale and has
-        # to be removed/re-added each run. A stable Apple Development cert keeps
-        # the same designated requirement across rebuilds, so you grant once and
-        # every later build is recognized automatically.
-        CODE_SIGN_STYLE: Automatic
-        DEVELOPMENT_TEAM: TAFDRXJZSR
         HEADER_SEARCH_PATHS:
           - "$(SRCROOT)/Input"
           - "$(SRCROOT)/Bridge"

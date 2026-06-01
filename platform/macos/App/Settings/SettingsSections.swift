@@ -15,8 +15,10 @@ import SwiftUI
 
 // MARK: - Detail router
 
-/// Switches the main content to match the selected sidebar section. The section
-/// title becomes the native window/toolbar title.
+/// Switches the main content to match the selected sidebar section. The page
+/// title is rendered as a large, leading-aligned header above the grouped form
+/// (`DetailTitleHeader`) rather than the small toolbar title, so it reads big and
+/// lines up with the form's content inset — like a macOS large-title pane.
 struct SettingsDetail: View {
     let section: SettingsSection
     @ObservedObject var settings: AppSettings
@@ -31,12 +33,36 @@ struct SettingsDetail: View {
             case .smart:         SmartPage(settings: settings)
             case .compatibility: CompatibilityPage(settings: settings)
             case .system:        SystemPage(settings: settings)
-            case .shortcuts:     ShortcutsPage()
+            case .shortcuts:     ShortcutsPage(settings: settings)
             case .advanced:      AdvancedPage(app: app)
+            case .about:         AboutPage()
             }
         }
         .formStyle(.grouped)
-        .navigationTitle(section.title)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            DetailTitleHeader(title: section.title)
+        }
+        // Keep a window/proxy title without showing the small toolbar duplicate.
+        .navigationTitle("")
+    }
+}
+
+/// Large, leading-aligned page title that sits above the grouped form. Its
+/// horizontal inset matches the grouped `Form` content margin so the title lines
+/// up with the section headers and rows below it.
+private struct DetailTitleHeader: View {
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(title)
+                .font(.largeTitle.weight(.bold))
+                .foregroundStyle(.primary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Key84DS.Layout.detailTitleLeading)
+        .padding(.top, 18)
+        .padding(.bottom, 6)
     }
 }
 
@@ -61,7 +87,8 @@ private struct OverviewPage: View {
                     Text(isVietnamese ? "Tiếng Việt đang bật" : "Tiếng Việt đang tắt")
                 }
                 LabeledContent("Phím tắt chuyển ngôn ngữ") {
-                    Text("⌥ Space").font(Key84DS.Typography.mono).foregroundStyle(.secondary)
+                    Text(Key84Shortcut.displayString(settings.switchKey))
+                        .font(Key84DS.Typography.mono).foregroundStyle(.secondary)
                 }
             }
 
@@ -211,7 +238,7 @@ private struct SystemPage: View {
             Section("Chuyển ngôn ngữ") {
                 LabeledContent("Chuyển ngôn ngữ", value: "Bấm vào mục VI/EN trên thanh menu")
                 LabeledContent("Phím tắt chuyển nhanh") {
-                    Text("⌥ Space").font(Key84DS.Typography.mono).foregroundStyle(.secondary)
+                    ShortcutRecorderField(value: $settings.switchKey)
                 }
             }
         }
@@ -221,11 +248,13 @@ private struct SystemPage: View {
 // MARK: - 7. Phím tắt
 
 private struct ShortcutsPage: View {
+    @ObservedObject var settings: AppSettings
+
     var body: some View {
         Form {
             Section {
                 LabeledContent("Chuyển VI/EN") {
-                    Text("⌥ Space").font(Key84DS.Typography.mono).foregroundStyle(.secondary)
+                    ShortcutRecorderField(value: $settings.switchKey)
                 }
                 LabeledContent("Mở Cài đặt") {
                     Text("⌘ ,").font(Key84DS.Typography.mono).foregroundStyle(.secondary)
@@ -233,7 +262,7 @@ private struct ShortcutsPage: View {
             } header: {
                 Text("Phím tắt hiện tại")
             } footer: {
-                Text("Tùy chỉnh phím tắt sẽ được hỗ trợ trong bản sau.")
+                Text("Bấm vào ô phím tắt rồi nhấn tổ hợp mới (kèm ⌘/⌥/⌃/⇧). Phím chuyển VI/EN áp dụng toàn hệ thống.")
             }
         }
     }
@@ -263,6 +292,69 @@ private struct AdvancedPage: View {
                     Text("Áp dụng lại quyền Trợ năng sau khi cấp quyền.")
                 }
             }
+        }
+    }
+}
+
+// MARK: - 9. Giới thiệu
+
+private struct AboutPage: View {
+    private let repoURL    = URL(string: "https://github.com/nghialuong/84Key")!
+    private let authorURL  = URL(string: "https://github.com/nghialuong")!
+    private let openKeyURL = URL(string: "https://github.com/tuyenvm/OpenKey")!
+    private let wordsURL   = URL(string: "https://github.com/first20hours/google-10000-english")!
+
+    var body: some View {
+        Form {
+            // Hero: centered logo, app name, version (no grouped card).
+            VStack(spacing: 6) {
+                Key84AppBadge(size: 72)
+                Text("84Key")
+                    .font(.title.weight(.bold))
+                Text("Phiên bản \(Key84Bundle.shortVersion)")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 12)
+            .listRowBackground(Color.clear)
+
+            Section("Liên kết") {
+                LabeledContent("Mã nguồn") {
+                    Link("github.com/nghialuong/84Key", destination: repoURL)
+                }
+                LabeledContent("Tác giả") {
+                    Link("nghialuong", destination: authorURL)
+                }
+            }
+
+            Section {
+                LabeledContent("OpenKey") {
+                    Link("Mai Vũ Tuyên", destination: openKeyURL)
+                }
+                LabeledContent("google-10000-english") {
+                    Link("first20hours", destination: wordsURL)
+                }
+            } header: {
+                Text("Nguồn mở")
+            } footer: {
+                Text("Engine gõ tiếng Việt dựa trên OpenKey của Mai Vũ Tuyên (GPLv3). "
+                   + "Danh sách từ tiếng Anh từ google-10000-english (public domain / MIT). "
+                   + "84Key được phát hành theo giấy phép GPLv3.")
+            }
+
+            // Closing line, centered, with a brand-pink heart.
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                (Text("Phát triển bởi nghialuong với tất cả trái tim ")
+                 + Text(Image(systemName: "heart.fill")).foregroundColor(Key84DS.Color.accent))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 4)
+            .listRowBackground(Color.clear)
         }
     }
 }

@@ -2,6 +2,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+/// Posted on the main queue when the VI/EN switch hotkey toggles the language.
+/// `userInfo[@"language"]` is the new value (1 = Vietnamese, 0 = English). The
+/// SwiftUI layer observes this to mirror the change in the menu bar / Settings.
+extern NSString * const Key84LanguageDidToggleNotification;
+
 /// Obj-C facade over the C++ Vietnamese typing engine and the macOS CGEvent
 /// tap. The interface is pure Obj-C (no C++ types) so it can be imported into
 /// Swift via the bridging header; the implementation (.mm) is Obj-C++ and talks
@@ -36,6 +41,11 @@ NS_ASSUME_NONNULL_BEGIN
 /// option global names (e.g. @"vInputType", @"vAutoDetectEnglish",
 /// @"vFixSpotlight"); values are integers. Unknown keys are ignored.
 - (void)applyEngineOptions:(NSDictionary<NSString *, NSNumber *> *)options;
+
+/// Suspend/resume the global switch-hotkey matching. The Settings shortcut
+/// recorder sets this to YES while capturing a new combo so the in-progress
+/// keypress doesn't also toggle the language, then back to NO when done.
+- (void)setSwitchKeyCaptureActive:(BOOL)active;
 
 /// Load the bundled English and Vietnamese-by-Telex dictionaries into the engine
 /// so automatic English detection works. Returns YES once the English dictionary

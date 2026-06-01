@@ -35,6 +35,7 @@ final class AppSettings: ObservableObject {
         "vSendKeyStepByStep": 0,
         "vFixChromiumBrowser": 0,
         "vPerformLayoutCompat": 0,
+        "vSwitchKeyStatus": 0x531,      // VI/EN toggle hotkey: ⌃⌘Space (bitmask, see Engine.h)
         "runOnStartup": 0,              // macOS-local (SMAppService), not an engine global
     ]
 
@@ -57,6 +58,9 @@ final class AppSettings: ObservableObject {
     @Published var autoDetectEnglish: Bool { didSet { persistAndApply() } }
     @Published var otherLanguage: Bool { didSet { persistAndApply() } }
     @Published var fixSpotlight: Bool { didSet { persistAndApply() } }
+    /// VI/EN toggle hotkey, encoded as the engine's `vSwitchKeyStatus` bitmask
+    /// (low byte = virtual keycode, bit8 ⌃, bit9 ⌥, bit10 ⌘, bit11 ⇧). 0 = none.
+    @Published var switchKey: Int { didSet { persistAndApply() } }
     @Published var runOnStartup: Bool { didSet { persistAndApply() } }
 
     private init() {
@@ -79,6 +83,7 @@ final class AppSettings: ObservableObject {
         autoDetectEnglish = d.integer(forKey: "vAutoDetectEnglish") != 0
         otherLanguage = d.integer(forKey: "vOtherLanguage") != 0
         fixSpotlight = d.integer(forKey: "vFixSpotlight") != 0
+        switchKey = d.integer(forKey: "vSwitchKeyStatus")
         runOnStartup = d.integer(forKey: "runOnStartup") != 0
     }
 
@@ -119,6 +124,7 @@ final class AppSettings: ObservableObject {
             "vAutoDetectEnglish": autoDetectEnglish ? 1 : 0,
             "vOtherLanguage": otherLanguage ? 1 : 0,
             "vFixSpotlight": fixSpotlight ? 1 : 0,
+            "vSwitchKeyStatus": switchKey,
         ]
     }
 
