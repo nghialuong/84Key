@@ -13,7 +13,10 @@ struct Key84App: App {
             // Reflect real state: VI/EN when active, a warning when 84Key can't
             // process typing yet (Accessibility permission needed).
             if app.isRunning {
-                Text(settings.language == 1 ? "VI" : "EN")
+                // Colored brand glyphs (pink V / blue E), 18pt — drawn in their
+                // own colors via .original so the menu bar doesn't tint them.
+                Image(settings.language == 1 ? "MenubarV" : "MenubarE")
+                    .renderingMode(.original)
             } else {
                 Image(systemName: "exclamationmark.triangle.fill")
             }
