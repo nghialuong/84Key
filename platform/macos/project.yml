@@ -27,6 +27,10 @@ targets:
         buildPhase: resources
       - path: ../../core/data/viet_telex.dat
         buildPhase: resources
+      # App icon + image assets. Source of truth lives in the repo (not the
+      # generated .xcodeproj); compiled into Assets.car at build time.
+      - path: Resources/Assets.xcassets
+        buildPhase: resources
     dependencies:
       # Carbon provides the Text Input Source (TIS) APIs used by the event tap
       # to honor the "turn off Vietnamese in other layouts" option. Other
@@ -46,6 +50,7 @@ targets:
         CURRENT_PROJECT_VERSION: "1"
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         HEADER_SEARCH_PATHS:
           - "$(SRCROOT)/Input"
           - "$(SRCROOT)/Bridge"
