@@ -40,7 +40,7 @@ private struct SidebarIdentityFooter: View {
         VStack(spacing: 0) {
             Divider()
             HStack(spacing: 8) {
-                Key84AppBadge(size: 18)
+                Key84AppIcon(size: 18)
                 Text("84Key")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Key84DS.Color.textPrimary)

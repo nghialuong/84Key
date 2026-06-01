@@ -308,7 +308,7 @@ private struct AboutPage: View {
         Form {
             // Hero: centered logo, app name, version (no grouped card).
             VStack(spacing: 6) {
-                Key84AppBadge(size: 72)
+                Key84AppIcon(size: 72)
                 Text("84Key")
                     .font(.title.weight(.bold))
                 Text("Phiên bản \(Key84Bundle.shortVersion)")

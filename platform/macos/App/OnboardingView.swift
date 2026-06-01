@@ -13,9 +13,7 @@ struct OnboardingView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 12) {
-                Image(systemName: "keyboard")
-                    .font(.system(size: 34))
-                    .foregroundStyle(.tint)
+                Key84AppIcon(size: 40)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Chào mừng đến với 84Key").font(.title2).bold()
                     Text("Bộ gõ tiếng Việt cho macOS")
