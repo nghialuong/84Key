@@ -61,14 +61,19 @@ public extension Key84DS {
 
 public extension Key84DS {
     enum Layout {
-        public static let windowMinWidth:    CGFloat = 900
-        public static let windowMinHeight:   CGFloat = 620
-        public static let windowIdealWidth:  CGFloat = 960
-        public static let windowIdealHeight: CGFloat = 680
+        /// The window is a fixed size — the user can only resize the sidebar
+        /// (the split divider), never the window itself. Paired with
+        /// `.windowResizability(.contentSize)` on the Settings scene.
+        public static let windowWidth:  CGFloat = 960
+        public static let windowHeight: CGFloat = 680
 
         public static let sidebarMinWidth:   CGFloat = 220
         public static let sidebarIdealWidth: CGFloat = 260
         public static let sidebarMaxWidth:   CGFloat = 320
+
+        /// Leading inset for the large detail title so it lines up with the
+        /// grouped `Form` content margin (section headers / rows below it).
+        public static let detailTitleLeading: CGFloat = 20
     }
 }
 

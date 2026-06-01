@@ -22,6 +22,9 @@ struct Key84App: App {
         Settings {
             SettingsView()
         }
+        // Window follows the content's fixed size → not user-resizable; only the
+        // sidebar divider can move.
+        .windowResizability(.contentSize)
     }
 }
 

@@ -18,6 +18,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
     case system
     case shortcuts
     case advanced
+    case about
 
     var id: String { rawValue }
 
@@ -32,6 +33,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .system:        return "Hệ thống"
         case .shortcuts:     return "Phím tắt"
         case .advanced:      return "Nâng cao"
+        case .about:         return "Giới thiệu"
         }
     }
 
@@ -46,6 +48,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .system:        return "Khởi động cùng macOS và cách chuyển ngôn ngữ."
         case .shortcuts:     return "Các phím tắt hiện có trong 84Key."
         case .advanced:      return "Quyền riêng tư và công cụ chẩn đoán."
+        case .about:         return "Về 84Key, mã nguồn và tác giả."
         }
     }
 
@@ -60,6 +63,7 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .system:        return "gearshape"
         case .shortcuts:     return "command"
         case .advanced:      return "slider.horizontal.3"
+        case .about:         return "info.circle"
         }
     }
 }
