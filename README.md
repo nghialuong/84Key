@@ -1,5 +1,7 @@
 # 84Key
 
+![84Key — Bộ gõ tiếng Việt cho macOS](docs/assets/banner.png)
+
 ![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 
 **Tiếng Việt** · [English](#english)
