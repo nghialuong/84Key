@@ -41,7 +41,9 @@ private struct MenuContent: View {
             Button(settings.language == 1 ? "Chuyển sang tiếng Anh" : "Chuyển sang tiếng Việt") {
                 settings.language = (settings.language == 1) ? 0 : 1
             }
-            .keyboardShortcut("e")
+            // Mirror the user's configured VI/EN switch hotkey (default ⌃⌘Space)
+            // so the menu hint stays in sync with Settings — not a hard-coded ⌘E.
+            .keyboardShortcut(Key84Shortcut.keyboardShortcut(settings.switchKey))
         } else {
             Text(app.hasPermission
                  ? "Đã cấp quyền — bấm Khởi động lại để kích hoạt"
