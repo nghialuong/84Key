@@ -13,7 +13,10 @@ struct Key84App: App {
             // Reflect real state: VI/EN when active, a warning when 84Key can't
             // process typing yet (Accessibility permission needed).
             if app.isRunning {
-                Text(settings.language == 1 ? "VI" : "EN")
+                // Colored brand glyphs (pink V / blue E), 18pt — drawn in their
+                // own colors via .original so the menu bar doesn't tint them.
+                Image(settings.language == 1 ? "MenubarV" : "MenubarE")
+                    .renderingMode(.original)
             } else {
                 Image(systemName: "exclamationmark.triangle.fill")
             }
@@ -48,9 +51,24 @@ private struct MenuContent: View {
         }
 
         Divider()
-        Button("Cài đặt…") { openSettings() }
+        Button("Cài đặt…") { openSettingsWindow() }
             .keyboardShortcut(",")
         Button("Thoát 84Key") { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
+    }
+
+    /// Open Settings and bring it to the front. As a menu-bar accessory app,
+    /// 84Key isn't auto-activated, so `openSettings()` alone can leave the window
+    /// buried behind other apps' windows. We activate and front it *once*; the
+    /// window level is left untouched, so the user can still send it behind other
+    /// windows afterward.
+    private func openSettingsWindow() {
+        openSettings()
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            NSApp.windows
+                .first { $0.identifier?.rawValue == "com_apple_SwiftUI_Settings_window" }?
+                .makeKeyAndOrderFront(nil)
+        }
     }
 }

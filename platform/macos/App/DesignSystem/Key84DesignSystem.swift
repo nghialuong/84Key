@@ -15,6 +15,7 @@
 
 import SwiftUI
 import AppKit
+import AppKit
 
 // MARK: - Namespace
 
@@ -114,5 +115,29 @@ public struct Key84AppBadge: View {
                     .foregroundStyle(.white)
             }
             .frame(width: size, height: size)
+    }
+}
+
+// MARK: - App icon (real bundle icon)
+
+/// The real 84Key app icon (`Assets.xcassets/AppIcon`), rendered at `size`.
+/// Read live from the running bundle so it always matches the shipped icon; no
+/// duplicate image asset. Falls back to the drawn badge if the icon image isn't
+/// available yet (e.g. very early launch). The image is rendered raw — macOS app
+/// icons already bake in the rounded-square shape and padding, so clipping would
+/// cut the built-in shadow.
+public struct Key84AppIcon: View {
+    private let size: CGFloat
+    public init(size: CGFloat = 72) { self.size = size }
+
+    public var body: some View {
+        if let icon = NSApplication.shared.applicationIconImage {
+            Image(nsImage: icon)
+                .resizable()
+                .scaledToFit()
+                .frame(width: size, height: size)
+        } else {
+            Key84AppBadge(size: size)
+        }
     }
 }
