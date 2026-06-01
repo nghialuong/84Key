@@ -36,14 +36,28 @@ private struct MenuContent: View {
     @ObservedObject var app: AppController
     @Environment(\.openSettings) private var openSettings
 
+    /// Radio-style binding for a language mode: turning a row on selects that
+    /// mode; turning the active row off is ignored (one mode is always on).
+    private func languageBinding(_ lang: Int) -> Binding<Bool> {
+        Binding(
+            get: { settings.language == lang },
+            set: { isOn in if isOn { settings.language = lang } }
+        )
+    }
+
     var body: some View {
         if app.isRunning {
-            Button(settings.language == 1 ? "Chuyển sang tiếng Anh" : "Chuyển sang tiếng Việt") {
-                settings.language = (settings.language == 1) ? 0 : 1
-            }
-            // Mirror the user's configured VI/EN switch hotkey (default ⌃⌘Space)
-            // so the menu hint stays in sync with Settings — not a hard-coded ⌘E.
-            .keyboardShortcut(Key84Shortcut.keyboardShortcut(settings.switchKey))
+            // Show both modes with a native checkmark on the active one (like the
+            // macOS Input Source menu) — clearer than a "Chuyển sang…" toggle and
+            // lets the user pick a mode directly. The configured switch hotkey
+            // (default ⌃⌘Space) is surfaced on the *inactive* row, where pressing
+            // it takes you, so it still reads as a toggle and stays in sync with
+            // Settings. The engine's global tap consumes the combo before it
+            // reaches the app, so this shortcut is hint-only and can't double-fire.
+            Toggle("Tiếng Việt", isOn: languageBinding(1))
+                .keyboardShortcut(settings.language == 1 ? nil : Key84Shortcut.keyboardShortcut(settings.switchKey))
+            Toggle("English", isOn: languageBinding(0))
+                .keyboardShortcut(settings.language == 0 ? nil : Key84Shortcut.keyboardShortcut(settings.switchKey))
         } else {
             Text(app.hasPermission
                  ? "Đã cấp quyền — bấm Khởi động lại để kích hoạt"
