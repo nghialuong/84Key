@@ -43,6 +43,15 @@ extern int vFixChromiumBrowser;
 extern int vPerformLayoutCompat;
 extern int vFixSpotlight;
 
+// Notification posted (on the main queue) when the VI/EN switch hotkey toggles the
+// language, so the SwiftUI layer can mirror the change in the menu bar / Settings.
+NSString * const Key84LanguageDidToggleNotification = @"Key84LanguageDidToggle";
+
+// When YES, the global tap ignores the switch hotkey. The Settings recorder sets
+// this while capturing a new combo so the in-progress keypress doesn't also toggle
+// the language (the session tap sees the key before the app's NSEvent monitor).
+static bool gSwitchKeyCaptureActive = false;
+
 // Engine helpers (declared in Vietnamese.h / Engine.h).
 extern Uint16 keyCodeToCharacter(const Uint32& keyCode);
 extern Uint16 _unicodeCompoundMark[];
@@ -591,6 +600,26 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
 
     gProxy = proxy;
 
+    // VI/EN switch hotkey. Matched before any language gating so it works in both
+    // Vietnamese and English mode. Requires an exact modifier match (so ⌘E does not
+    // fire on ⌘⇧E) and is suppressed while the Settings recorder is capturing.
+    if (type == kCGEventKeyDown && vSwitchKeyStatus != 0 && !gSwitchKeyCaptureActive &&
+        GET_SWITCH_KEY(vSwitchKeyStatus) == gKeycode &&
+        HAS_CONTROL(vSwitchKeyStatus) == ((gFlag & kCGEventFlagMaskControl)   ? 1 : 0) &&
+        HAS_OPTION(vSwitchKeyStatus)  == ((gFlag & kCGEventFlagMaskAlternate) ? 1 : 0) &&
+        HAS_COMMAND(vSwitchKeyStatus) == ((gFlag & kCGEventFlagMaskCommand)   ? 1 : 0) &&
+        HAS_SHIFT(vSwitchKeyStatus)   == ((gFlag & kCGEventFlagMaskShift)     ? 1 : 0)) {
+        vLanguage = vLanguage ? 0 : 1;
+        RequestNewSession();                 // drop any in-flight word
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [[NSNotificationCenter defaultCenter]
+                postNotificationName:Key84LanguageDidToggleNotification
+                              object:nil
+                            userInfo:@{@"language": @(vLanguage)}];
+        });
+        return NULL;                         // consume the hotkey
+    }
+
     // English mode
     if (vLanguage == 0) {
         if (vUseMacro && vUseMacroInEnglishMode && type == kCGEventKeyDown) {
@@ -835,9 +864,13 @@ void ensureEngineInitialized() {
         SET_IF(vAllowConsonantZFWJ) SET_IF(vQuickStartConsonant) SET_IF(vQuickEndConsonant)
         SET_IF(vAutoDetectEnglish) SET_IF(vOtherLanguage)
         SET_IF(vFixSpotlight) SET_IF(vSendKeyStepByStep) SET_IF(vFixChromiumBrowser)
-        SET_IF(vPerformLayoutCompat)
+        SET_IF(vPerformLayoutCompat) SET_IF(vSwitchKeyStatus)
         #undef SET_IF
     }
+}
+
+- (void)setSwitchKeyCaptureActive:(BOOL)active {
+    gSwitchKeyCaptureActive = active ? true : false;
 }
 
 - (BOOL)loadDictionaries {

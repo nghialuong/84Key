@@ -20,6 +20,7 @@ final class AppController: ObservableObject {
 
     private var pollTimer: Timer?
     private var loginObserver: AnyCancellable?
+    private var langObserver: NSObjectProtocol?
     private var onboarding: OnboardingController?
 
     func startup() {
@@ -33,6 +34,18 @@ final class AppController: ObservableObject {
         loginObserver = settings.$runOnStartup
             .dropFirst()
             .sink { LoginItemManager.sync(enabled: $0) }
+
+        // Mirror hotkey-driven VI/EN toggles (from the global event tap) back into
+        // AppSettings so the menu-bar label and Settings reflect the change. Posted
+        // on the main queue; setting `language` re-pushes the same value (idempotent).
+        langObserver = NotificationCenter.default.addObserver(
+            forName: .Key84LanguageDidToggle,
+            object: nil, queue: .main
+        ) { note in
+            guard let lang = note.userInfo?["language"] as? Int,
+                  AppSettings.shared.language != lang else { return }
+            AppSettings.shared.language = lang
+        }
 
         refresh()
         if !isRunning {
