@@ -73,18 +73,74 @@ private struct MenuContent: View {
             .keyboardShortcut("q")
     }
 
-    /// Open Settings and bring it to the front. As a menu-bar accessory app,
-    /// 84Key isn't auto-activated, so `openSettings()` alone can leave the window
-    /// buried behind other apps' windows. We activate and front it *once*; the
-    /// window level is left untouched, so the user can still send it behind other
-    /// windows afterward.
+    /// Open Settings and bring it to the front. The `SettingsWindowActivator`
+    /// also promotes 84Key to a regular app while the window is up — see its doc
+    /// comment for why that's required to render correctly.
     private func openSettingsWindow() {
         openSettings()
-        DispatchQueue.main.async {
-            NSApp.activate(ignoringOtherApps: true)
-            NSApp.windows
-                .first { $0.identifier?.rawValue == "com_apple_SwiftUI_Settings_window" }?
-                .makeKeyAndOrderFront(nil)
+        SettingsWindowActivator.shared.activate()
+    }
+}
+
+/// Promotes 84Key to a `.regular` app while the SwiftUI Settings window is open,
+/// then reverts to `.accessory` (menu-bar only) when it closes.
+///
+/// Why: 84Key is an `LSUIElement` accessory app, so it's never the *active* app
+/// on its own. AppKit then renders the Settings window's `NavigationSplitView`
+/// and native sidebar vibrancy in their inactive/opaque state, which — with
+/// macOS wallpaper tinting — looks washed-out and "legacy" (a warm beige panel).
+/// Running from Xcode hid the bug because the debugger activates the launched
+/// app. Briefly going `.regular` (the same trick `OnboardingController` uses)
+/// makes the window render in its normal, active appearance. A Dock icon shows
+/// only while Settings is open.
+@MainActor
+final class SettingsWindowActivator {
+    static let shared = SettingsWindowActivator()
+
+    /// Identifier SwiftUI assigns to the window backing the `Settings` scene.
+    private static let settingsWindowID = "com_apple_SwiftUI_Settings_window"
+    private var closeObserver: NSObjectProtocol?
+
+    private init() {}
+
+    /// Call right after `openSettings()`. Promotes the app, fronts the window,
+    /// and arms a one-shot revert for when the user closes Settings.
+    func activate() {
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        // The window may not exist on the very first `openSettings()` until the
+        // next runloop turn, so look it up (and front it) asynchronously.
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  let window = NSApp.windows.first(where: {
+                      $0.identifier?.rawValue == Self.settingsWindowID
+                  })
+            else { return }
+            window.makeKeyAndOrderFront(nil)
+            self.armRevert(for: window)
+        }
+    }
+
+    /// Revert to a menu-bar-only accessory app once this Settings window closes.
+    /// Re-arms on every open (the SwiftUI Settings window is reused, not freed),
+    /// removing any prior observer so we never double-register.
+    private func armRevert(for window: NSWindow) {
+        if let token = closeObserver {
+            NotificationCenter.default.removeObserver(token)
+            closeObserver = nil
+        }
+        closeObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                NSApp.setActivationPolicy(.accessory)
+                if let token = self?.closeObserver {
+                    NotificationCenter.default.removeObserver(token)
+                    self?.closeObserver = nil
+                }
+            }
         }
     }
 }
