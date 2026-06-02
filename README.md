@@ -157,12 +157,14 @@ Requirements: **macOS** with **Xcode** installed, and **[XcodeGen](https://githu
 
 See [`docs/OVERVIEW.md`](docs/OVERVIEW.md) for a plain-language product and feature
 reference, [`docs/BUILD.md`](docs/BUILD.md) for build details,
+[`docs/RELEASE.md`](docs/RELEASE.md) for the automated signed-and-notarized DMG release,
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the engine and app fit together,
 and [`docs/TESTING.md`](docs/TESTING.md) for the test suites (engine harness, keystroke
 simulation with drop-in `cases/*.txt` fixtures, and the live end-to-end check).
 
-Notarized distribution requires an Apple Developer account (planned for a
-future release); local development builds do not.
+Notarized distribution requires an Apple Developer account; local development
+builds do not. Pushing a `v*` tag publishes a notarized DMG — see
+[`docs/RELEASE.md`](docs/RELEASE.md).
 
 ## Credits
 

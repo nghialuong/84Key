@@ -1,0 +1,83 @@
+name: Release
+
+# Build, sign, and notarize a macOS DMG, then publish it as a GitHub Release.
+# Runs automatically when a version tag (e.g. v0.1.0) is pushed.
+#
+# Secrets are read from the "release" environment and are never printed. GitHub
+# masks them in logs automatically; the steps below pass them via env only and
+# never echo their values. See docs/RELEASE.md for how to create the secrets.
+on:
+  push:
+    tags:
+      - 'v*'
+
+# Only the permission needed to publish the release; nothing else.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & notarize DMG
+    runs-on: macos-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Import Developer ID signing certificate
+        env:
+          CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+          KEYCHAIN_PW="$(openssl rand -base64 24)"
+          CERT_PATH="$RUNNER_TEMP/devid.p12"
+
+          # Decode the certificate without echoing it.
+          printf '%s' "$CERT_P12" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN"
+          security import "$CERT_PATH" -k "$KEYCHAIN" -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign
+          # Allow codesign to use the key non-interactively.
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PW" "$KEYCHAIN" >/dev/null
+          # Put our keychain first in the search list so package.sh finds the identity.
+          security list-keychains -d user -s "$KEYCHAIN" \
+            $(security list-keychains -d user | sed 's/"//g')
+          rm -f "$CERT_PATH"
+
+      - name: Write App Store Connect API key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$ASC_KEY_P8" | base64 --decode > "$RUNNER_TEMP/asc.p8"
+
+      - name: Build, sign, notarize DMG
+        env:
+          KEY84_ASC_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          KEY84_ASC_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          export KEY84_ASC_KEY_PATH="$RUNNER_TEMP/asc.p8"
+          export KEY84_VERSION="${GITHUB_REF_NAME#v}"
+          bash tools/package.sh
+          mv build/84Key.dmg "build/84Key-${GITHUB_REF_NAME}.dmg"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: build/84Key-${{ github.ref_name }}.dmg
+
+      - name: Clean up secrets material
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/asc.p8" "$RUNNER_TEMP/devid.p12"

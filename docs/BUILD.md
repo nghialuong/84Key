@@ -53,8 +53,12 @@ python3 tools/gen_dict.py --english /path/to/google-10000-english.txt
 `.github/workflows/ci.yml` runs two jobs on push/PR: the C++ engine test harness
 (Ubuntu) and the macOS app build (regenerated via XcodeGen, `CODE_SIGNING_ALLOWED=NO`).
 
+`.github/workflows/release.yml` runs on a version tag (`v*`): it builds, signs,
+notarizes, and publishes a `.dmg` as a GitHub Release. See [`RELEASE.md`](RELEASE.md).
+
 ## Packaging / distribution
 
-A packaging script produces a runnable `.app` (and a `.dmg`). Code signing and
+`tools/package.sh` produces a runnable `.app` and a `.dmg`. Code signing and
 notarization require an Apple Developer account; without one, a locally-signed
-build runs after approving it in System Settings → Privacy & Security.
+build runs after approving it in System Settings → Privacy & Security. For the
+automated, signed-and-notarized release flow, see [`RELEASE.md`](RELEASE.md).
