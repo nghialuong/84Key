@@ -101,7 +101,22 @@ echo "    DMG: $DMG"
 if [ ${#NOTARY_ARGS[@]} -gt 0 ]; then
   echo ""
   echo "==> Notarizing — this can take a few minutes"
-  xcrun notarytool submit "$DMG" "${NOTARY_ARGS[@]}" --wait
+  # notarytool can intermittently stall connecting/uploading to Apple's notary
+  # service and then hang on `--wait` indefinitely (in CI that burns the whole
+  # 6-hour job limit). Bound each attempt with --timeout so a stuck submission
+  # fails fast, and retry once since the stall is transient. Override the cap
+  # with KEY84_NOTARY_TIMEOUT (e.g. "30m").
+  NOTARY_TIMEOUT="${KEY84_NOTARY_TIMEOUT:-20m}"
+  attempt=1
+  until xcrun notarytool submit "$DMG" "${NOTARY_ARGS[@]}" \
+        --wait --timeout "$NOTARY_TIMEOUT"; do
+    if [ "$attempt" -ge 2 ]; then
+      echo "ERROR: notarization failed/stalled after $attempt attempts" >&2
+      exit 1
+    fi
+    echo "==> Notarization attempt $attempt stalled or failed; retrying…" >&2
+    attempt=$((attempt + 1))
+  done
   echo "==> Stapling"
   xcrun stapler staple "$DMG"
   xcrun stapler validate "$DMG"

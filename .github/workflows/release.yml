@@ -19,6 +19,10 @@ jobs:
   release:
     name: Build & notarize DMG
     runs-on: macos-latest
+    # Hard cap so a stalled notarization (notarytool can hang on Apple's notary
+    # service) fails the job in minutes instead of burning the default 6-hour
+    # limit. package.sh already bounds + retries notarytool within this window.
+    timeout-minutes: 45
     environment: release
     steps:
       - uses: actions/checkout@v4
