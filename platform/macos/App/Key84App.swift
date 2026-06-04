@@ -100,6 +100,8 @@ final class SettingsWindowActivator {
     /// Identifier SwiftUI assigns to the window backing the `Settings` scene.
     private static let settingsWindowID = "com_apple_SwiftUI_Settings_window"
     private var closeObserver: NSObjectProtocol?
+    /// Keeps the open Settings window's vibrancy pinned active for its lifetime.
+    private var pinner: Key84VibrancyPinner?
 
     private init() {}
 
@@ -112,7 +114,11 @@ final class SettingsWindowActivator {
         // request and the window renders in its washed-out inactive appearance
         // (the original bug).
         DispatchQueue.main.async { [weak self] in
-            NSApp.activate(ignoringOtherApps: true)
+            // Cooperative activation (macOS 14+). `NSApp.activate(ignoringOtherApps:)`
+            // is deprecated and routinely refused from a background/accessory state;
+            // `NSRunningApplication.current.activate` is the API Apple steers you to
+            // and is what actually brings an LSUIElement app forward here.
+            NSRunningApplication.current.activate(options: [.activateAllWindows])
             self?.frontSettingsWindow(retriesLeft: 12)
         }
     }
@@ -132,9 +138,12 @@ final class SettingsWindowActivator {
         }
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
-        // Belt-and-suspenders: force the NSVisualEffectView-backed content to
-        // render active even if activation is momentarily delayed.
-        Key84Vibrancy.forceActive(in: window)
+        // Keep the content's NSVisualEffectView materials pinned active for the
+        // window's lifetime — a one-shot pin loses the race against SwiftUI
+        // rebuilding the subtree. The Settings window is reused across opens, so
+        // detach any prior pinner before installing a fresh one.
+        pinner?.detach()
+        pinner = Key84VibrancyPinner(window: window)
         armRevert(for: window)
     }
 
@@ -153,6 +162,8 @@ final class SettingsWindowActivator {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 NSApp.setActivationPolicy(.accessory)
+                self?.pinner?.detach()
+                self?.pinner = nil
                 if let token = self?.closeObserver {
                     NotificationCenter.default.removeObserver(token)
                     self?.closeObserver = nil
@@ -176,16 +187,84 @@ final class SettingsWindowActivator {
 enum Key84Vibrancy {
     /// Recursively pin every `NSVisualEffectView` under `window`'s content view
     /// to the active state. SwiftUI owns these views, so call this after the
-    /// window is shown (and again if its content is rebuilt).
+    /// window is shown (and again if its content is rebuilt). Prefer
+    /// `Key84VibrancyPinner`, which keeps re-applying this as SwiftUI rebuilds.
     static func forceActive(in window: NSWindow) {
         guard let root = window.contentView else { return }
         pinActive(root)
     }
 
-    private static func pinActive(_ view: NSView) {
+    /// Recursively set every `NSVisualEffectView` in the subtree to `.active`.
+    /// Idempotent and cheap (AppKit no-ops an unchanged `state`).
+    static func pinActive(_ view: NSView) {
         if let effect = view as? NSVisualEffectView {
             effect.state = .active
         }
         for sub in view.subviews { pinActive(sub) }
+    }
+}
+
+/// Keeps a single window's `NSVisualEffectView` materials pinned to `.active` for
+/// the window's whole lifetime — not just once.
+///
+/// Why a retained object instead of a one-shot pin: SwiftUI owns the effect views
+/// inside `NavigationSplitView`/`Form`, and it builds and *replaces* that subtree
+/// on runloop turns *after* the window first appears. A single pin (the previous
+/// approach) walks an empty/partial tree, or gets overwritten by fresh views in
+/// the default `.followsWindowActiveState` — so a standalone (inactive) launch
+/// still rendered washed-out. This object re-pins:
+///   - in a short burst right after present (covers the construction race), and
+///   - on every `didUpdate`/key-state/expose notification (covers later rebuilds).
+/// Pinning is cheap and idempotent, so re-running it freely is safe. `detach()`
+/// (or `deinit`) removes the observers; the Settings window is reused across
+/// opens, so its activator must `detach()` the old pinner before making a new one.
+@MainActor
+final class Key84VibrancyPinner {
+    private weak var window: NSWindow?
+    private var observers: [NSObjectProtocol] = []
+
+    init(window: NSWindow) {
+        self.window = window
+        let center = NotificationCenter.default
+        // didUpdate fires whenever the window refreshes its views — the hook that
+        // catches SwiftUI swapping in fresh effect views. The others cover focus
+        // transitions and re-exposure, where `.followsWindowActiveState` would
+        // otherwise desaturate.
+        for name: NSNotification.Name in [
+            NSWindow.didUpdateNotification,
+            NSWindow.didBecomeKeyNotification,
+            NSWindow.didResignKeyNotification,
+            NSWindow.didExposeNotification,
+        ] {
+            observers.append(center.addObserver(
+                forName: name, object: window, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.pinNow() }
+            })
+        }
+        // Burst across the next few runloop turns: the window object exists now,
+        // but SwiftUI populates its effect-view subtree a few turns later.
+        for delay in [0.0, 0.05, 0.15, 0.3] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.pinNow()
+            }
+        }
+    }
+
+    deinit {
+        let tokens = observers
+        for token in tokens { NotificationCenter.default.removeObserver(token) }
+    }
+
+    /// Stop observing. Call before discarding the pinner (e.g. on window close,
+    /// or before replacing it for a reused window) so we never double-register.
+    func detach() {
+        for token in observers { NotificationCenter.default.removeObserver(token) }
+        observers.removeAll()
+    }
+
+    private func pinNow() {
+        guard let root = window?.contentView else { return }
+        Key84Vibrancy.pinActive(root)
     }
 }
