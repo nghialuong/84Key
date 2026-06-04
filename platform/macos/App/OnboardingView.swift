@@ -104,8 +104,17 @@ final class OnboardingController: NSObject, NSWindowDelegate {
             window = win
         }
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        // Defer activation to the next runloop turn so the `.regular` policy
+        // change registers first; otherwise macOS can refuse activation and the
+        // window renders in its washed-out inactive appearance (same root cause
+        // as the Settings window — see SettingsWindowActivator).
+        DispatchQueue.main.async { [weak self] in
+            NSApp.activate(ignoringOtherApps: true)
+            guard let window = self?.window else { return }
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+            Key84Vibrancy.forceActive(in: window)
+        }
     }
 
     func dismiss() {

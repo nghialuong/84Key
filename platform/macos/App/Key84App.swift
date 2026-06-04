@@ -107,18 +107,35 @@ final class SettingsWindowActivator {
     /// and arms a one-shot revert for when the user closes Settings.
     func activate() {
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: true)
-        // The window may not exist on the very first `openSettings()` until the
-        // next runloop turn, so look it up (and front it) asynchronously.
+        // Defer to the next runloop turn: the `.regular` policy change must
+        // register *before* we activate, or macOS refuses the activation
+        // request and the window renders in its washed-out inactive appearance
+        // (the original bug).
         DispatchQueue.main.async { [weak self] in
-            guard let self,
-                  let window = NSApp.windows.first(where: {
-                      $0.identifier?.rawValue == Self.settingsWindowID
-                  })
-            else { return }
-            window.makeKeyAndOrderFront(nil)
-            self.armRevert(for: window)
+            NSApp.activate(ignoringOtherApps: true)
+            self?.frontSettingsWindow(retriesLeft: 12)
         }
+    }
+
+    /// Front + activate the Settings window once it exists. On the very first
+    /// `openSettings()` the window isn't created until a later runloop turn, so
+    /// retry briefly rather than giving up after a single look.
+    private func frontSettingsWindow(retriesLeft: Int) {
+        guard let window = NSApp.windows.first(where: {
+            $0.identifier?.rawValue == Self.settingsWindowID
+        }) else {
+            guard retriesLeft > 0 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.frontSettingsWindow(retriesLeft: retriesLeft - 1)
+            }
+            return
+        }
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+        // Belt-and-suspenders: force the NSVisualEffectView-backed content to
+        // render active even if activation is momentarily delayed.
+        Key84Vibrancy.forceActive(in: window)
+        armRevert(for: window)
     }
 
     /// Revert to a menu-bar-only accessory app once this Settings window closes.
@@ -142,5 +159,33 @@ final class SettingsWindowActivator {
                 }
             }
         }
+    }
+}
+
+/// Forces AppKit vibrancy (`NSVisualEffectView`) to render in its *active* look
+/// regardless of whether the owning window is key.
+///
+/// Why: 84Key is an `LSUIElement` accessory app, so its windows are frequently
+/// not the key window of the active app. The default `.followsWindowActiveState`
+/// then renders the `NavigationSplitView` sidebar material in its inactive,
+/// opaque state — a washed-out "legacy" beige (made worse by wallpaper tinting).
+/// Promoting/activating the app is racy (cooperative activation on macOS 14+ can
+/// refuse it), so instead of betting on activation we pin the material to
+/// `.active`. This is deterministic and survives the app losing focus.
+@MainActor
+enum Key84Vibrancy {
+    /// Recursively pin every `NSVisualEffectView` under `window`'s content view
+    /// to the active state. SwiftUI owns these views, so call this after the
+    /// window is shown (and again if its content is rebuilt).
+    static func forceActive(in window: NSWindow) {
+        guard let root = window.contentView else { return }
+        pinActive(root)
+    }
+
+    private static func pinActive(_ view: NSView) {
+        if let effect = view as? NSVisualEffectView {
+            effect.state = .active
+        }
+        for sub in view.subviews { pinActive(sub) }
     }
 }
