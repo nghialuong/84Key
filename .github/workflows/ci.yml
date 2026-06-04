@@ -21,8 +21,18 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Show Xcode version
-        run: xcodebuild -version
+      # Build against the macOS 26 SDK (Xcode 26.x), matching the release pipeline
+      # and local dev — the runner defaults to Xcode 16 / macOS 15 SDK. Keeps CI
+      # building the same SDK we ship, so a green build reflects the real product.
+      # Pick the newest installed 26.x so this survives image patch bumps.
+      - name: Select Xcode 26 (macOS 26 SDK)
+        run: |
+          set -euo pipefail
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$XCODE" ] || { echo "ERROR: no Xcode 26.x found on the runner" >&2; exit 1; }
+          echo "Selecting $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
       # The Xcode project is generated from platform/macos/project.yml via
       # XcodeGen and committed; regenerate so the project always matches the
       # spec, then build without code signing.

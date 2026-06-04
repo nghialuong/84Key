@@ -27,6 +27,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Build against the macOS 26 SDK (Xcode 26.x), not the runner's default
+      # Xcode 16 / macOS 15 SDK. An app built with the macOS 15 SDK does not adopt
+      # the macOS 26 (Tahoe) appearance, so on macOS 26 it renders in the legacy
+      # "washed-out" look — the exact bug that only showed up in the shipped DMG
+      # (local builds use Xcode 26 and looked fine). Pick the newest installed 26.x
+      # so this survives image patch bumps.
+      - name: Select Xcode 26 (macOS 26 SDK)
+        run: |
+          set -euo pipefail
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$XCODE" ] || { echo "ERROR: no Xcode 26.x found on the runner" >&2; exit 1; }
+          echo "Selecting $XCODE"
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
