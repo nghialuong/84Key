@@ -72,6 +72,8 @@ struct OnboardingView: View {
 final class OnboardingController: NSObject, NSWindowDelegate {
     private weak var app: AppController?
     private var window: NSWindow?
+    /// Keeps the onboarding window's vibrancy pinned active for its lifetime.
+    private var pinner: Key84VibrancyPinner?
 
     init(controller: AppController) {
         self.app = controller
@@ -109,15 +111,22 @@ final class OnboardingController: NSObject, NSWindowDelegate {
         // window renders in its washed-out inactive appearance (same root cause
         // as the Settings window — see SettingsWindowActivator).
         DispatchQueue.main.async { [weak self] in
-            NSApp.activate(ignoringOtherApps: true)
-            guard let window = self?.window else { return }
+            // Cooperative activation (macOS 14+): the deprecated
+            // `NSApp.activate(ignoringOtherApps:)` is routinely refused from an
+            // accessory/background state. See SettingsWindowActivator for the why.
+            NSRunningApplication.current.activate(options: [.activateAllWindows])
+            guard let self, let window = self.window else { return }
             window.makeKeyAndOrderFront(nil)
             window.orderFrontRegardless()
-            Key84Vibrancy.forceActive(in: window)
+            // Keep vibrancy pinned active for the window's lifetime, not just once.
+            self.pinner?.detach()
+            self.pinner = Key84VibrancyPinner(window: window)
         }
     }
 
     func dismiss() {
+        pinner?.detach()
+        pinner = nil
         window?.orderOut(nil)
         window?.delegate = nil
         window = nil
@@ -125,6 +134,8 @@ final class OnboardingController: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        pinner?.detach()
+        pinner = nil
         NSApp.setActivationPolicy(.accessory)
     }
 }
