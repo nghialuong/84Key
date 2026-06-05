@@ -12,6 +12,14 @@ settings:
     CLANG_ENABLE_OBJC_ARC: YES
     SWIFT_VERSION: "5.0"
 
+packages:
+  # Sparkle drives in-app auto-update: it reads the appcast feed (SUFeedURL),
+  # verifies the EdDSA signature (SUPublicEDKey) of the downloaded DMG, and
+  # installs it. See docs/RELEASE.md for the appcast/keys setup.
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.6.0"
+
 targets:
   84Key:
     type: application
@@ -39,6 +47,8 @@ targets:
       - sdk: Carbon.framework
       # ServiceManagement provides SMAppService for the run-at-login feature.
       - sdk: ServiceManagement.framework
+      # Sparkle auto-updater framework (embedded into the .app bundle).
+      - package: Sparkle
     settings:
       base:
         PRODUCT_NAME: "84Key"

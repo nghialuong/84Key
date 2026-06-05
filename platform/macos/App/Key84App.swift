@@ -5,10 +5,13 @@ struct Key84App: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @ObservedObject private var settings = AppSettings.shared
     @ObservedObject private var app = AppController.shared
+    // Starts Sparkle's updater at launch so scheduled background checks run; also
+    // backs the menu's "Kiểm tra cập nhật…" item.
+    @StateObject private var updater = UpdaterController.shared
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(settings: settings, app: app)
+            MenuContent(settings: settings, app: app, updater: updater)
         } label: {
             // Reflect real state: VI/EN when active, a warning when 84Key can't
             // process typing yet (Accessibility permission needed).
@@ -34,6 +37,7 @@ struct Key84App: App {
 private struct MenuContent: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var app: AppController
+    @ObservedObject var updater: UpdaterController
     @Environment(\.openSettings) private var openSettings
 
     /// Radio-style binding for a language mode: turning a row on selects that
@@ -67,6 +71,8 @@ private struct MenuContent: View {
         }
 
         Divider()
+        Button("Kiểm tra cập nhật…") { updater.checkForUpdates() }
+            .disabled(!updater.canCheckForUpdates)
         Button("Cài đặt…") { openSettingsWindow() }
             .keyboardShortcut(",")
         Button("Thoát 84Key") { NSApplication.shared.terminate(nil) }

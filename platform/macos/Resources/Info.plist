@@ -30,5 +30,18 @@
 	<string>NSApplication</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>84Key is free software under the GNU GPLv3. Vietnamese typing engine derived from OpenKey.</string>
+	<!-- Sparkle auto-update. SUFeedURL is the appcast served raw from the
+	     public repo's gh-pages branch (raw.githubusercontent.com is HTTPS and,
+	     unlike GitHub Pages here, isn't hijacked by the account's nghialuong.com
+	     custom domain). SUPublicEDKey is the EdDSA public key that verifies
+	     downloaded updates (see docs/RELEASE.md). Auto-checks daily. -->
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/nghialuong/84Key/gh-pages/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>pmOUhSI4qLDIbgndphAMYGc/oZJIk9Nw9KdEcmJBSOY=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>
