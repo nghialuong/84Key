@@ -29,6 +29,8 @@ diện từ tiếng Anh và sửa lỗi đặt dấu trong Spotlight.
   phần cài đặt và hướng dẫn cấp quyền Trợ năng (Accessibility).
 - **Nhiều bảng mã** — Unicode (mặc định), TCVN3, VNI-Windows, Unicode tổ hợp và
   CP1258.
+- **Tự động cập nhật** — ứng dụng tự kiểm tra và cài bản mới qua Sparkle, có chữ
+  ký EdDSA để xác minh; bạn cũng có thể kiểm tra thủ công từ menu.
 - **Không thu thập dữ liệu.**
 
 ## Quyền riêng tư
@@ -44,16 +46,30 @@ dụng dùng `CGEvent` tap để đọc và thay thế văn bản khi bạn gõ.
 được dùng ngay trên máy để gõ tiếng Việt chính xác và sửa lỗi Spotlight. 84Key
 chủ động không can thiệp vào các ô nhập mật khẩu (secure input).
 
-## Cài đặt & thiết lập
+## Tải về & cài đặt
 
-1. Tự build ứng dụng (xem mục **Building** ở phần tiếng Anh bên dưới) hoặc tải
-   bản phát hành.
-2. Mở 84Key. Ứng dụng xuất hiện trên thanh menu.
+### macOS
+
+1. Tải bản `84Key.dmg` mới nhất từ trang
+   [Releases](https://github.com/nghialuong/84Key/releases). Bản phát hành đã được
+   ký và công chứng (notarized) bởi Apple nên mở ra không bị cảnh báo Gatekeeper.
+2. Mở tệp `.dmg`, kéo **84Key** vào thư mục **Applications**, rồi mở ứng dụng.
 3. Cấp quyền **Trợ năng** khi được yêu cầu
-   (System Settings → Privacy & Security → Accessibility). Phần hướng dẫn sẽ
-   chỉ bạn từng bước.
-4. **Tắt các bộ gõ tiếng Việt khác** như OpenKey hoặc EVKey khi dùng 84Key.
-   Chạy nhiều bộ gõ cùng lúc sẽ gây xung đột phím và sai chữ.
+   (System Settings → Privacy & Security → Accessibility). Phần hướng dẫn sẽ chỉ
+   bạn từng bước.
+4. **Tắt các bộ gõ tiếng Việt khác** như OpenKey hoặc EVKey khi dùng 84Key. Chạy
+   nhiều bộ gõ cùng lúc sẽ gây xung đột phím và sai chữ.
+
+Sau khi cài, 84Key **tự cập nhật** lên bản mới (qua Sparkle); bạn cũng có thể
+chọn *Kiểm tra cập nhật…* trong menu để kiểm tra ngay.
+
+> Nâng cao: bạn có thể tự build từ mã nguồn — xem mục **Building** ở phần tiếng
+> Anh bên dưới.
+
+### Windows / Linux
+
+Chưa hỗ trợ — sẽ có trong tương lai. Engine gõ tiếng Việt đã viết bằng C++ độc
+lập nền tảng để chuẩn bị cho việc này.
 
 > Mã định danh ứng dụng (bundle id): `com.nghialuong.key84`.
 
@@ -64,6 +80,8 @@ chủ động không can thiệp vào các ô nhập mật khẩu (secure input)
 - **[google-10000-english](https://github.com/first20hours/google-10000-english)**
   — danh sách từ tiếng Anh dùng cho tính năng nhận diện tiếng Anh (public
   domain / MIT).
+- **[Sparkle](https://github.com/sparkle-project/Sparkle)** — framework tự động
+  cập nhật trong ứng dụng (giấy phép MIT).
 
 ## Giấy phép
 
@@ -101,6 +119,9 @@ automatic English-word detection and a Spotlight diacritic-placement fix.
   settings and a guided Accessibility onboarding flow.
 - **Multiple code tables** — Unicode (default), TCVN3, VNI-Windows, Unicode
   Compound, and CP1258.
+- **Automatic updates** — the app checks for and installs new versions via
+  Sparkle, verified with an EdDSA signature; you can also check on demand from the
+  menu.
 - **No telemetry, ever** — 84Key does not phone home.
 
 ## Privacy
@@ -116,16 +137,31 @@ uses a `CGEvent` tap to read and replace text as you type. This permission is
 used solely on-device to deliver correct Vietnamese input and the Spotlight
 fix. 84Key intentionally avoids acting in secure-input/password fields.
 
-## Installation & setup
+## Download & install
 
-1. Build the app (see **Building** below) or download a release.
-2. Launch 84Key. It appears in your menu bar.
+### macOS
+
+1. Download the latest `84Key.dmg` from the
+   [Releases page](https://github.com/nghialuong/84Key/releases). Releases are
+   signed and **notarized** by Apple, so they open with no Gatekeeper warning.
+2. Open the `.dmg`, drag **84Key** into your **Applications** folder, then launch
+   it. It appears in your menu bar.
 3. Grant the **Accessibility** permission when prompted
    (System Settings → Privacy & Security → Accessibility). The onboarding flow
    guides you through this.
-4. **Disable other Vietnamese IMEs** such as OpenKey or EVKey while using
-   84Key. Running more than one Vietnamese input method at the same time causes
+4. **Disable other Vietnamese IMEs** such as OpenKey or EVKey while using 84Key.
+   Running more than one Vietnamese input method at the same time causes
    conflicting keystrokes and garbled output.
+
+After installing, 84Key **keeps itself up to date** (via Sparkle); you can also
+pick *Kiểm tra cập nhật…* from the menu to check immediately.
+
+> Advanced: you can also build from source — see **Building** below.
+
+### Windows / Linux
+
+Not supported yet — planned for the future. The typing engine is already
+platform-independent C++ to make this possible.
 
 > Bundle identifier: `com.nghialuong.key84`.
 
@@ -173,6 +209,8 @@ builds do not. Pushing a `v*` tag publishes a notarized DMG — see
 - **[google-10000-english](https://github.com/first20hours/google-10000-english)**
   — the English word list used for automatic English detection (public domain /
   MIT).
+- **[Sparkle](https://github.com/sparkle-project/Sparkle)** — the in-app
+  auto-update framework (MIT).
 
 ## License
 
