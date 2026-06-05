@@ -74,7 +74,26 @@ APP="$BUILD/dd/Build/Products/$CONFIG/$APP_NAME.app"
 
 if [ -n "$CODESIGN_IDENTITY" ]; then
   echo "==> Re-signing app with: $CODESIGN_IDENTITY"
-  codesign --force --deep --options runtime $TS -s "$CODESIGN_IDENTITY" "$APP"
+  # Sign inside-out. `codesign --deep` is discouraged by Apple and notably fails
+  # notarization for Sparkle, whose framework bundles XPC services, an Autoupdate
+  # helper and an Updater.app that must each be signed with the hardened runtime.
+  # Sign the nested Sparkle code first (deepest first), then the framework, then
+  # the app. Each path is guarded so a Sparkle layout change just skips, and so
+  # builds without Sparkle still work.
+  SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+  if [ -d "$SPARKLE" ]; then
+    echo "==> Signing Sparkle.framework components"
+    for nested in \
+      "$SPARKLE/Versions/B/XPCServices/Downloader.xpc" \
+      "$SPARKLE/Versions/B/XPCServices/Installer.xpc" \
+      "$SPARKLE/Versions/B/Autoupdate" \
+      "$SPARKLE/Versions/B/Updater.app"; do
+      [ -e "$nested" ] && codesign --force --options runtime $TS \
+        -s "$CODESIGN_IDENTITY" "$nested"
+    done
+    codesign --force --options runtime $TS -s "$CODESIGN_IDENTITY" "$SPARKLE"
+  fi
+  codesign --force --options runtime $TS -s "$CODESIGN_IDENTITY" "$APP"
 else
   echo "    (ad-hoc signed — no Developer ID/Apple Development identity found)"
 fi
