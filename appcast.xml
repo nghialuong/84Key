@@ -2,7 +2,7 @@
 <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
   <channel>
     <title>84Key</title>
-    <link>https://nghialuong.github.io/84Key/appcast.xml</link>
+    <link>https://raw.githubusercontent.com/nghialuong/84Key/gh-pages/appcast.xml</link>
     <description>84Key — Vietnamese input method for macOS</description>
     <language>en</language>
   </channel>
