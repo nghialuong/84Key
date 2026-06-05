@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>84Key</title>
+    <link>https://nghialuong.github.io/84Key/appcast.xml</link>
+    <description>84Key — Vietnamese input method for macOS</description>
+    <language>en</language>
+  </channel>
+</rss>
