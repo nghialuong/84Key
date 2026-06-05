@@ -16,6 +16,15 @@ project for the core typing logic that makes accurate Vietnamese input
 possible.
 
 
+Third-party software
+--------------------
+
+1. Sparkle
+   Source: https://github.com/sparkle-project/Sparkle
+   License: MIT (with a BSD-licensed bundled bsdiff).
+   Provides 84Key's in-app auto-update (appcast + signed update install).
+
+
 Third-party data
 ----------------
 

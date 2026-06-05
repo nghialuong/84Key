@@ -95,6 +95,61 @@ jobs:
           generate_release_notes: true
           files: build/84Key-${{ github.ref_name }}.dmg
 
+      # Sign the DMG with the Sparkle EdDSA key and add an <item> to the appcast
+      # on the gh-pages branch. The app reads it raw over HTTPS at
+      # raw.githubusercontent.com/nghialuong/84Key/gh-pages/appcast.xml (see Info.plist).
+      # Stable releases only: pre-release tags (anything with a '-', e.g.
+      # v0.1.0-rc1) still publish a Release above but are NOT advertised to
+      # stable users via the appcast. The DMG keeps living on GitHub Releases;
+      # the appcast just points at its per-tag download URL.
+      - name: Update Sparkle appcast (stable only)
+        if: ${{ !contains(github.ref_name, '-') }}
+        env:
+          SPARKLE_PRIVATE_ED_KEY: ${{ secrets.SPARKLE_PRIVATE_ED_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          DMG="build/84Key-${TAG}.dmg"
+          APP="build/dd/Build/Products/Release/84Key.app"
+          SIGN_UPDATE="build/dd/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
+
+          # CFBundleVersion is what Sparkle compares to decide an update is newer
+          # (bump CURRENT_PROJECT_VERSION every release — see docs/RELEASE.md).
+          BUILD_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP/Contents/Info.plist")"
+          MIN_SYSTEM="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$APP/Contents/Info.plist" 2>/dev/null || echo 14.0)"
+
+          # Sign the DMG; the private key is piped in from the secret (never written
+          # to disk). Output is: sparkle:edSignature="…" length="…".
+          SIG_ATTRS="$(printf '%s' "$SPARKLE_PRIVATE_ED_KEY" | "$SIGN_UPDATE" --ed-key-file - "$DMG")"
+
+          # Clone (or create) the gh-pages branch and splice in the new item.
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git clone --branch gh-pages --single-branch "$REPO_URL" pages 2>/dev/null; then
+            echo "Updating existing gh-pages appcast"
+          else
+            echo "gh-pages branch not found — creating it"
+            git clone "$REPO_URL" pages
+            ( cd pages && git checkout --orphan gh-pages && git rm -rf . >/dev/null 2>&1 || true )
+          fi
+
+          APPCAST="pages/appcast.xml" \
+          DOWNLOAD_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/84Key-${TAG}.dmg" \
+          SHORT_VERSION="${TAG#v}" \
+          BUILD_VERSION="$BUILD_VERSION" \
+          MIN_SYSTEM="$MIN_SYSTEM" \
+          SIG_ATTRS="$SIG_ATTRS" \
+          RELEASE_PAGE="https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}" \
+          python3 tools/update_appcast.py
+
+          cd pages
+          touch .nojekyll   # serve appcast.xml verbatim (no Jekyll processing)
+          git add appcast.xml .nojekyll
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "appcast: 84Key ${TAG}"
+          git push origin gh-pages
+
       - name: Clean up secrets material
         if: always()
         run: |
