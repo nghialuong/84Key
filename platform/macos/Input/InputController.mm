@@ -571,6 +571,18 @@ bool replaceFocusedTextViaAX(int backspaceCount, NSString* newText) {
 /**
  * MAIN HOOK entry. Ported from OpenKeyCallback in OpenKey.mm.
  */
+// Flip VI/EN and tell the UI. Shared by the keyed and modifier-only hotkeys.
+static void Key84ToggleLanguage() {
+    vLanguage = vLanguage ? 0 : 1;
+    RequestNewSession();                 // drop any in-flight word
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [[NSNotificationCenter defaultCenter]
+            postNotificationName:Key84LanguageDidToggleNotification
+                          object:nil
+                        userInfo:@{@"language": @(vLanguage)}];
+    });
+}
+
 CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void* refcon) {
     // re-enable the tap if the system disabled it (timeout / user input)
     if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
@@ -592,6 +604,35 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
         gKeycode = ConvertEventToKeyboardLayoutCompatKeyCode(event, gKeycode);
     }
 
+    // Modifier-only VI/EN hotkey (e.g. ⇧⌘): the low byte is the 0xFF sentinel and
+    // bits 8-11 are the required modifiers. Fires when that exact combo is released
+    // without any other key/mouse pressed in the meantime, so it doesn't clobber
+    // combos like ⇧⌘S. Handled here, before the type filter below drops
+    // kCGEventFlagsChanged. Suppressed while the Settings recorder is capturing.
+    if (!gSwitchKeyCaptureActive && GET_SWITCH_KEY(vSwitchKeyStatus) == 0xFF) {
+        static bool armed = false;
+        int targetMods = vSwitchKeyStatus & 0xF00;
+        int curMods = ((gFlag & kCGEventFlagMaskControl)   ? 0x100 : 0)
+                    | ((gFlag & kCGEventFlagMaskAlternate) ? 0x200 : 0)
+                    | ((gFlag & kCGEventFlagMaskCommand)   ? 0x400 : 0)
+                    | ((gFlag & kCGEventFlagMaskShift)     ? 0x800 : 0);
+        if (type == kCGEventFlagsChanged) {
+            if (curMods == targetMods) {
+                armed = true;                            // exact combo held
+            } else if (armed) {
+                armed = false;                           // a modifier changed: released or added
+                // Fire only if a target modifier was released and no extra one is held.
+                if ((curMods & targetMods) != targetMods && (curMods & ~targetMods) == 0) {
+                    Key84ToggleLanguage();
+                }
+            }
+        } else if (type == kCGEventKeyDown ||
+                   type == kCGEventLeftMouseDown || type == kCGEventRightMouseDown) {
+            armed = false;                               // modifiers used with another key → cancel
+        }
+        // Don't consume: let kCGEventFlagsChanged pass so modifier state stays sane.
+    }
+
     // only the events below are interesting
     if ((type != kCGEventKeyDown) && (type != kCGEventKeyUp) &&
         (type != kCGEventLeftMouseDown) && (type != kCGEventRightMouseDown) &&
@@ -609,14 +650,7 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
         HAS_OPTION(vSwitchKeyStatus)  == ((gFlag & kCGEventFlagMaskAlternate) ? 1 : 0) &&
         HAS_COMMAND(vSwitchKeyStatus) == ((gFlag & kCGEventFlagMaskCommand)   ? 1 : 0) &&
         HAS_SHIFT(vSwitchKeyStatus)   == ((gFlag & kCGEventFlagMaskShift)     ? 1 : 0)) {
-        vLanguage = vLanguage ? 0 : 1;
-        RequestNewSession();                 // drop any in-flight word
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [[NSNotificationCenter defaultCenter]
-                postNotificationName:Key84LanguageDidToggleNotification
-                              object:nil
-                            userInfo:@{@"language": @(vLanguage)}];
-        });
+        Key84ToggleLanguage();
         return NULL;                         // consume the hotkey
     }
 

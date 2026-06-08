@@ -25,9 +25,25 @@ enum Key84Shortcut {
     private static let commandBit = 0x400
     private static let shiftBit   = 0x800
 
+    /// Sentinel keycode (low byte) marking a modifier-only combo (e.g. ⇧⌘ with no
+    /// normal key). 0xFF is never a real virtual keycode (those top out near 0x7E),
+    /// and keycode 0 can't be used because it's the `A` key.
+    static let modifierOnlyKey = 0xFF
+
     /// Encode a recorded combo into the `vSwitchKeyStatus` bitmask.
     static func encode(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> Int {
         var v = Int(keyCode) & 0xFF
+        v |= modifierBits(modifiers)
+        return v
+    }
+
+    /// Encode a modifier-only combo (no normal key) into the bitmask.
+    static func encodeModifierOnly(modifiers: NSEvent.ModifierFlags) -> Int {
+        modifierOnlyKey | modifierBits(modifiers)
+    }
+
+    private static func modifierBits(_ modifiers: NSEvent.ModifierFlags) -> Int {
+        var v = 0
         if modifiers.contains(.control) { v |= controlBit }
         if modifiers.contains(.option)  { v |= optionBit }
         if modifiers.contains(.command) { v |= commandBit }
@@ -37,6 +53,9 @@ enum Key84Shortcut {
 
     static func keyCode(_ value: Int) -> UInt16 { UInt16(value & 0xFF) }
 
+    /// True when the value is a modifier-only combo (no normal key).
+    static func isModifierOnly(_ value: Int) -> Bool { (value & 0xFF) == modifierOnlyKey }
+
     /// Translate the `vSwitchKeyStatus` bitmask into a SwiftUI `KeyboardShortcut`
     /// so the menu-bar item can show the *configured* toggle combo instead of a
     /// hard-coded one. Returns `nil` when no key is set or the keycode can't be
@@ -44,7 +63,8 @@ enum Key84Shortcut {
     /// no shortcut hint but still toggles when clicked. The engine's global tap
     /// consumes the combo before it reaches the app, so this never double-fires.
     static func keyboardShortcut(_ value: Int) -> KeyboardShortcut? {
-        guard value != 0, let key = keyEquivalent(for: keyCode(value)) else { return nil }
+        guard value != 0, !isModifierOnly(value),
+              let key = keyEquivalent(for: keyCode(value)) else { return nil }
         var mods: SwiftUI.EventModifiers = []
         if value & controlBit != 0 { mods.insert(.control) }
         if value & optionBit  != 0 { mods.insert(.option) }
@@ -58,16 +78,28 @@ enum Key84Shortcut {
         return namedKeyEquivalents[Int(code)]
     }
 
-    /// Human-readable combo, e.g. "⌃⌘Space". Empty value → "Chưa đặt".
+    /// Human-readable combo, e.g. "⌃⌘Space" or "⇧⌘" (modifier-only).
+    /// Empty value → "Chưa đặt".
     static func displayString(_ value: Int) -> String {
         guard value != 0 else { return "Chưa đặt" }
+        var s = modifierGlyphs(forBits: value)
+        if !isModifierOnly(value) { s += keyLabel(for: keyCode(value)) }
+        return s
+    }
+
+    /// The modifier glyphs (⌃⌥⇧⌘, Apple's canonical order) for a bitmask.
+    static func modifierGlyphs(forBits value: Int) -> String {
         var s = ""
         if value & controlBit != 0 { s += "⌃" }
         if value & optionBit  != 0 { s += "⌥" }
-        if value & shiftBit   != 0 { s += "⇧" }   // Apple's canonical order: ⌃⌥⇧⌘
+        if value & shiftBit   != 0 { s += "⇧" }
         if value & commandBit != 0 { s += "⌘" }
-        s += keyLabel(for: keyCode(value))
         return s
+    }
+
+    /// The modifier glyphs for a live `NSEvent.ModifierFlags` set.
+    static func modifierGlyphs(_ modifiers: NSEvent.ModifierFlags) -> String {
+        modifierGlyphs(forBits: modifierBits(modifiers))
     }
 
     /// Label for a virtual keycode (ANSI layout) — letters, digits, punctuation
@@ -146,7 +178,9 @@ struct ShortcutRecorderField: View {
 
     @State private var isRecording = false
     @State private var monitor: Any?
-    @State private var hint = false   // briefly true when a no-modifier key is rejected
+    @State private var hint = false        // briefly true when an invalid combo is rejected
+    @State private var liveMods: NSEvent.ModifierFlags = []  // modifiers held right now (live preview)
+    @State private var peakMods: NSEvent.ModifierFlags = []  // most modifiers held this gesture
 
     var body: some View {
         HStack(spacing: 6) {
@@ -167,7 +201,7 @@ struct ShortcutRecorderField: View {
                     )
             }
             .buttonStyle(.plain)
-            .help(isRecording ? "Nhấn tổ hợp phím (kèm ⌘/⌥/⌃/⇧)" : "Bấm để đặt phím tắt")
+            .help(isRecording ? "Nhấn tổ hợp phím (kèm ⌘/⌥/⌃/⇧, hoặc ≥2 modifier)" : "Bấm để đặt phím tắt")
 
             if value != 0 && !isRecording {
                 Button {
@@ -184,7 +218,11 @@ struct ShortcutRecorderField: View {
     }
 
     private var label: String {
-        if isRecording { return hint ? "Cần kèm ⌘/⌥/⌃/⇧" : "Nhấn tổ hợp phím…" }
+        if isRecording {
+            if hint { return "Cần ≥2 phím ⌘/⌥/⌃/⇧" }
+            if !liveMods.isEmpty { return Key84Shortcut.modifierGlyphs(liveMods) }  // live preview
+            return "Nhấn tổ hợp phím…"
+        }
         return Key84Shortcut.displayString(value)
     }
 
@@ -204,10 +242,14 @@ struct ShortcutRecorderField: View {
     private func startRecording() {
         isRecording = true
         hint = false
+        liveMods = []
+        peakMods = []
         // Suspend the global tap's matching so the combo we're about to press
         // doesn't also toggle the language while we record it.
         AppController.shared.input.setSwitchKeyCaptureActive(true)
-        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+        // Also watch .flagsChanged so a modifier-only combo (e.g. ⇧⌘) can be
+        // recorded — bare modifiers never fire .keyDown.
+        monitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             handle(event)
             return nil   // swallow while recording
         }
@@ -216,24 +258,53 @@ struct ShortcutRecorderField: View {
     private func stopRecording() {
         isRecording = false
         hint = false
+        liveMods = []
+        peakMods = []
         if let m = monitor { NSEvent.removeMonitor(m); monitor = nil }
         AppController.shared.input.setSwitchKeyCaptureActive(false)
     }
 
+    /// Number of distinct modifier keys in a flag set (⌘⌥⌃⇧).
+    private func modifierCount(_ mods: NSEvent.ModifierFlags) -> Int {
+        var n = 0
+        for flag in [NSEvent.ModifierFlags.command, .option, .control, .shift] where mods.contains(flag) { n += 1 }
+        return n
+    }
+
     private func handle(_ event: NSEvent) {
-        // Esc with no modifiers cancels.
         let mods = event.modifierFlags.intersection([.command, .option, .control, .shift])
-        if event.keyCode == UInt16(kVK_Escape) && mods.isEmpty {
+        switch event.type {
+        case .keyDown:
+            // Esc with no modifiers cancels.
+            if event.keyCode == UInt16(kVK_Escape) && mods.isEmpty {
+                stopRecording()
+                return
+            }
+            // A normal key needs at least one modifier so a bare key can't become
+            // a global toggle that swallows typing.
+            guard !mods.isEmpty else {
+                hint = true
+                return
+            }
+            value = Key84Shortcut.encode(keyCode: event.keyCode, modifiers: mods)
             stopRecording()
-            return
+        case .flagsChanged:
+            hint = false
+            liveMods = mods                              // live preview follows what's held
+            if modifierCount(mods) > modifierCount(peakMods) { peakMods = mods }
+            // Commit on release: when all modifiers are let go, take the peak combo.
+            if mods.isEmpty {
+                if modifierCount(peakMods) >= 2 {        // modifier-only needs ≥2 to avoid misfires
+                    value = Key84Shortcut.encodeModifierOnly(modifiers: peakMods)
+                    stopRecording()
+                } else {
+                    hint = true                          // a single modifier isn't enough
+                    peakMods = []
+                }
+            }
+        default:
+            break
         }
-        // Require at least one modifier (keyDown never fires for bare modifiers).
-        guard !mods.isEmpty else {
-            hint = true
-            return
-        }
-        value = Key84Shortcut.encode(keyCode: event.keyCode, modifiers: mods)
-        stopRecording()
     }
 }
 
