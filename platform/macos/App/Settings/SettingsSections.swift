@@ -262,7 +262,7 @@ private struct ShortcutsPage: View {
             } header: {
                 Text("Phím tắt hiện tại")
             } footer: {
-                Text("Bấm vào ô phím tắt rồi nhấn tổ hợp mới (kèm ⌘/⌥/⌃/⇧). Phím chuyển VI/EN áp dụng toàn hệ thống.")
+                Text("Bấm vào ô phím tắt rồi nhấn tổ hợp mới: một phím kèm ⌘/⌥/⌃/⇧, hoặc từ 2 phím ⌘/⌥/⌃/⇧ trở lên (vd ⇧⌘). Phím chuyển VI/EN áp dụng toàn hệ thống.")
             }
         }
     }
