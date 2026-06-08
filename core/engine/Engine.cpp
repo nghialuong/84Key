@@ -1366,8 +1366,15 @@ static bool buildEngRawFromStates() {
 //the raw key instead of applying a Vietnamese diacritic. This is only consulted
 //when a transform key would otherwise fire (see the gate below), so it stays off
 //the hot path for ordinary keys.
+static bool rawDdReorderIsViet();
 static bool shouldTreatAsEnglish() {
     if (!engDetectEnabled() || !buildEngRawFromStates())
+        return false;
+
+    //Vietnamese-first for the đ-trigger placed after the vowel ("dod" = đo): its
+    //canonical spelling ("ddo") is Vietnamese even though the raw keys look English
+    //("dod"/"dodge"). restoreEnglishAtBreak() still reverts genuine English at the break.
+    if (rawDdReorderIsViet())
         return false;
 
     //Complete English word: suppress unless the keystrokes are also a valid
@@ -1431,6 +1438,23 @@ static bool rawToneReorderIsViet() {
     return isEnglishWord(w) && (isVietByTelex(w) || isVietByTelexPrefix(w));
 }
 
+//Telex lets the đ-trigger 'd' sit after the vowel/coda: "đo" can be typed
+//d-d-o (canonical) OR d-o-d. The Vietnamese dictionary only stores the canonical
+//leading-"dd" spelling ("ddo"), so a trigger-last raw ("dod") looks English
+//("dod"/"dodge") and gets suppressed — while "dond"/"dongd" transform only because
+//they happen not to be English. In Vietnamese mode we favor Vietnamese: rebuild the
+//canonical spelling (drop the trailing trigger 'd', prepend a 'd') and check the
+//dict. Naturally scoped to words that start AND end with 'd', so English like
+//"add"/"dad"/"dodge" (no trailing trigger) is untouched. Mirrors rawToneReorderIsViet().
+static bool rawDdReorderIsViet() {
+    string w = _engRawWord;
+    if (w.size() < 2 || w[0] != 'd' || w.back() != 'd')
+        return false;
+    w.pop_back();
+    w.insert(w.begin(), 'd');           // "dod" -> "ddo"
+    return isVietByTelex(w) || isVietByTelexPrefix(w);
+}
+
 //At a word boundary, if the whole typed word turned out to be English but a
 //diacritic was applied mid-word (the ambiguous-prefix case the keystroke-time
 //check intentionally leaves to Vietnamese, e.g. "google", "message"), restore
@@ -1443,7 +1467,7 @@ static bool restoreEnglishAtBreak(const int& handleCode) {
     //digraph like "dd" would be reverted at the break, undoing the diacritic.
     //rawToneReorderIsViet() covers tone-first spellings ("ist" of "ít").
     if (!isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord)
-        || rawToneReorderIsViet())
+        || rawToneReorderIsViet() || rawDdReorderIsViet())
         return false;
 
     //Only act if the current on-screen word actually differs from the raw keys.
