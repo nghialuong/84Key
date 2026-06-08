@@ -298,6 +298,19 @@ int main() {
     // must still restore: "test" stays "test" (the Vietnamese "tét" is "tets").
     expectAscii(st, "E15", "test", true);
     expectAscii(st, "E16", "last", true);
+    // đ-trigger placed after the vowel/coda: "dod" = đo is the đ-analog of E1-E3.
+    // Its canonical spelling "ddo" is Vietnamese, so favor Vietnamese even though
+    // the raw keys "dod" are an English word / prefix of "dodge". The trailing-trigger
+    // forms "dond"/"dongd" already transformed (not English) — guard against regressing.
+    expectEq(st, "E17", "dod", "đo");
+    expectEq(st, "E18", "dond", "đon");
+    expectEq(st, "E19", "dongd", "đong");
+    expectEq(st, "E20", "dod ", "đo ");        // stays đo at the word break, not reverted
+    // ...but a genuine English word with a "dod" prefix and no trailing trigger
+    // ("dodge" ends in 'e') must still restore at the break.
+    expectAscii(st, "E21", "dodge", true);
+    // đ double-trigger escape: one more d after "dod" (=đo) restores the literal "dod".
+    expectEq(st, "E22", "dodd", "dod");
 
     printf("\n== F. Option OFF = identical legacy behavior ==\n");
     resetOptions();
