@@ -38,6 +38,34 @@ launch 84Key asks for **Accessibility** permission (System Settings → Privacy 
 Security → Accessibility). Disable other Vietnamese input methods (OpenKey, EVKey,
 the built-in macOS Vietnamese source) to avoid conflicts.
 
+### Testing a dev build next to an installed release
+
+The Debug configuration builds as a **separate app** — bundle id
+`com.nghialuong.key84.debug`, named **"84Key Dev"** — so it gets its own
+Accessibility entry and its own settings, without disturbing an installed
+release. Only one Vietnamese IME can run at a time, so **quit the release before
+launching the Dev build** (and vice-versa); two taps transforming the same keys
+produce garbage.
+
+For the Accessibility grant to persist across rebuilds, sign the Dev build with a
+real (non-ad-hoc) Apple Development certificate — TCC then keys on the team +
+bundle id instead of a per-build hash. Substitute your own team id (the cert's OU,
+shown by `security find-identity -v -p codesigning`):
+
+```sh
+cd platform/macos
+xcodegen generate
+xcodebuild -scheme 84Key -configuration Debug \
+  CODE_SIGN_STYLE=Manual \
+  CODE_SIGN_IDENTITY="Apple Development: <Your Name> (XXXXXXXXXX)" \
+  PROVISIONING_PROFILE_SPECIFIER="" \
+  DEVELOPMENT_TEAM=<TEAMID> \
+  build
+```
+
+Then grant "84Key Dev" Accessibility once. An unsigned build
+(`CODE_SIGNING_ALLOWED=NO`) still runs, but re-prompts after every rebuild.
+
 ## Dictionaries
 
 `core/data/english_words.dat` and `core/data/viet_telex.dat` are committed.
