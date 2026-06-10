@@ -80,6 +80,14 @@ NSArray* gUnicodeCompoundApp = @[@"com.apple.",
                                  @"com.microsoft.edgemac.Dev", @"com.microsoft.edgemac.Beta",
                                  @"com.microsoft.Edge.Dev", @"com.microsoft.Edge"];
 
+// Chromium-family browsers whose omnibox inline-autocomplete swallows injected
+// backspaces (e.g. "đủ" -> "dđủ" in the address bar). We auto-apply the
+// Shift+Left replace here so URL-bar typing works without the global
+// vFixRecommendBrowser toggle (which pollutes ordinary text fields). Prefix
+// match so release channels (Chrome Canary, Edge Beta, ...) are covered too.
+NSArray* gChromiumBrowserApp = @[@"com.google.Chrome", @"com.brave.Browser",
+                                 @"com.microsoft.Edge", @"com.microsoft.edgemac"];
+
 CGEventSourceRef gEventSource = NULL;
 vKeyHookState* pData = NULL;
 CGEventRef gBackSpaceDown = NULL;
@@ -124,6 +132,13 @@ BOOL containUnicodeCompoundApp(NSString* topApp) {
             [[gUnicodeCompoundApp objectAtIndex:j] isEqualToString:topApp])
             return true;
     }
+    return false;
+}
+
+BOOL isChromiumBrowserApp(NSString* topApp) {
+    if (topApp == nil) return false;
+    for (NSString* b in gChromiumBrowserApp)
+        if ([topApp hasPrefix:b]) return true;
     return false;
 }
 
@@ -744,15 +759,20 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                 }
             }
 
-            // fix autocomplete
-            if (vFixRecommendBrowser && pData->extCode != 4) {
-                if (vFixChromiumBrowser && [gUnicodeCompoundApp containsObject:FRONT_APP]) {
+            // fix autocomplete. The Chromium omnibox swallows injected
+            // backspaces (inline-autocomplete), corrupting transforms such as
+            // "đủ" -> "dđủ". Auto-apply the Shift+Left replace in Chromium
+            // browsers so URL-bar typing is correct out of the box; the global
+            // vFixRecommendBrowser still forces the empty-char fix in any other
+            // app the user opted into.
+            if (pData->extCode != 4) {
+                if (isChromiumBrowserApp(FRONT_APP)) {
                     if (pData->backspaceCount > 0) {
                         SendShiftAndLeftArrow();
                         if (pData->backspaceCount == 1)
                             pData->backspaceCount--;
                     }
-                } else {
+                } else if (vFixRecommendBrowser) {
                     SendEmptyCharacter();
                     pData->backspaceCount++;
                 }
