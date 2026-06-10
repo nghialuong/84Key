@@ -209,6 +209,7 @@ int main() {
     expectEq(st, "A6", "quyst", "quýt");
     expectEq(st, "A7", "ddafn", "đàn");
     expectEq(st, "A8", "ddi", "đi");
+    expectEq(st, "A8b", "ddur", "đủ");          // đ + tone on a lone vowel (URL-bar repro)
     expectEq(st, "A9", "toans", "toán");
     expectEq(st, "A10", "toasn", "toán");
     expectEq(st, "A11", "hoaf", "hoà");        // modern orthography ON
