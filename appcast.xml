@@ -6,6 +6,15 @@
     <description>84Key — Vietnamese input method for macOS</description>
     <language>en</language>
     <item>
+      <title>Version 0.1.2</title>
+      <link>https://github.com/nghialuong/84Key/releases/tag/v0.1.2</link>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>0.1.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 10 Jun 2026 03:45:18 +0000</pubDate>
+      <enclosure url="https://github.com/nghialuong/84Key/releases/download/v0.1.2/84Key-v0.1.2.dmg" type="application/octet-stream" sparkle:edSignature="/+REOrjgsLVrj2uq09h1Law1oOLqaK0KFY4nkgsAXAWT8wLKkEGTohVxHjriZdAXUyAC0igY57HPTD6Pq9mdDw==" length="3465196" />
+    </item>
+    <item>
       <title>Version 0.1.1</title>
       <link>https://github.com/nghialuong/84Key/releases/tag/v0.1.1</link>
       <sparkle:version>3</sparkle:version>
