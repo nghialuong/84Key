@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-06-14
+
+### Fixed
+
+- **macOS 27 (Tahoe) Spotlight typing**: the Spotlight search field is now owned
+  by the `com.apple.campo` process instead of `com.apple.Spotlight`, so the
+  Accessibility atomic-replace path no longer matched and injected backspaces were
+  dropped (e.g. "chúng" came out "chuúng"). Spotlight-like fields are now detected
+  by bundle id **and** by AX behavior (an Apple search field exposing value +
+  selected range), and fall back to a Shift+Left select-and-overwrite when the
+  atomic replace can't run (N≠M, VNI, or AX failure).
+
 ## [0.1.0] - Unreleased
 
 First macOS release.
