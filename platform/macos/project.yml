@@ -66,13 +66,16 @@ targets:
           - "$(SRCROOT)/Bridge"
           - "$(SRCROOT)/../../core/engine"
       configs:
-        # Debug runs as a distinct app ("84Key Dev", separate bundle id) so a dev
+        # Debug runs as a distinct app ("84Key (DEV)", separate bundle id) so a dev
         # build can be granted Accessibility on its own — without disturbing an
-        # installed release's grant or sharing its UserDefaults. NOTE: only one
+        # installed release's grant or sharing its UserDefaults. It also uses the
+        # AppIcon-Dev icon set (red "DEV" badge) so the two entries are
+        # unmistakable in System Settings > Accessibility. NOTE: only one
         # Vietnamese IME can run at a time; quit the release before testing Debug.
         Debug:
-          PRODUCT_NAME: "84Key Dev"
+          PRODUCT_NAME: "84Key (DEV)"
           PRODUCT_BUNDLE_IDENTIFIER: com.nghialuong.key84.debug
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon-Dev
 
 schemes:
   84Key:
