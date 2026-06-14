@@ -14,9 +14,10 @@
 //  84Key changes:
 //   - Wrapped the tap lifecycle in the Obj-C `InputController` class so Swift
 //     can start/stop it through a pure Obj-C header.
-//   - The Spotlight Accessibility atomic-replace path is intentionally omitted
-//     here; see the TODO(T14) marker below. The normal CGEvent backspace+insert
-//     path is used everywhere instead.
+//   - Added the Spotlight / system-search Accessibility atomic-replace path
+//     (isAXReplaceTargetFocused / replaceFocusedTextViaAX) so async search
+//     fields that drop injected backspaces type correctly; ordinary apps still
+//     use the normal CGEvent backspace+insert path.
 //   - Smart-switch-key, convert-tool, hotkey switching, and macro/Userdefaults
 //     loading are out of scope for this task and are not ported.
 //
@@ -118,7 +119,13 @@ CFRunLoopSourceRef gRunLoopSource = NULL;
 // Spotlight fix: apps whose async text field loses an injected backspace, so we
 // replace text atomically via the Accessibility API instead of backspace+insert.
 // (Ported from OpenKey.mm, ModernKey: _axReplaceApp / _axSystemWide.)
-NSArray* gAxReplaceApp = @[@"com.apple.Spotlight"];
+//
+// The owning process differs by macOS version: classic Spotlight is
+// "com.apple.Spotlight"; the rewritten Spotlight in macOS 26/27 (Tahoe) hosts
+// the field in "com.apple.campo". This list is just a fast-path allowlist —
+// isAXReplaceTargetFocused() also detects any system search field by behavior,
+// so a future rename still works without a code change.
+NSArray* gAxReplaceApp = @[@"com.apple.Spotlight", @"com.apple.campo"];
 AXUIElementRef gAxSystemWide = NULL;
 bool gAxFocusIsTarget = false;     // cached: is the focused element owned by an gAxReplaceApp?
 double gAxFocusCheckedAt = 0;      // cache timestamp (seconds)
@@ -463,9 +470,18 @@ CGKeyCode ConvertEventToKeyboardLayoutCompatKeyCode(CGEventRef keyEvent, CGKeyCo
 //   normal CGEvent backspace+insert path, so other apps are unaffected.
 // ---------------------------------------------------------------------------
 
-// Is the system-wide focused element owned by one of gAxReplaceApp (e.g.
-// Spotlight)? Cached for a short TTL so we don't do Accessibility IPC on every
-// keystroke.
+// Is the system-wide focused element a text field that loses injected
+// backspaces (Spotlight and similar system search overlays), so we should
+// rewrite it atomically via the Accessibility API instead? Cached for a short
+// TTL so we don't do Accessibility IPC on every keystroke.
+//
+// Detection is twofold and version-robust:
+//   1. fast path: the owning app's bundle id is in gAxReplaceApp; or
+//   2. behavior path: an Apple system process (com.apple.*) presents a search
+//      field (subrole AXSearchField) that exposes both kAXValue and
+//      kAXSelectedTextRange (i.e. the atomic replace can actually run).
+// (2) keeps macOS-27 Spotlight (com.apple.campo) and any future rename working
+// without hardcoding a build-specific identifier.
 bool isAXReplaceTargetFocused() {
     double now = CFAbsoluteTimeGetCurrent();
     if (now - gAxFocusCheckedAt < 0.15)
@@ -482,8 +498,25 @@ bool isAXReplaceTargetFocused() {
         pid_t pid = 0;
         if (AXUIElementGetPid(focused, &pid) == kAXErrorSuccess && pid > 0) {
             NSRunningApplication* app = [NSRunningApplication runningApplicationWithProcessIdentifier:pid];
-            if (app.bundleIdentifier && [gAxReplaceApp containsObject:app.bundleIdentifier])
-                gAxFocusIsTarget = true;
+            NSString* bundle = app.bundleIdentifier;
+            if (bundle && [gAxReplaceApp containsObject:bundle]) {
+                gAxFocusIsTarget = true;                      // (1) fast path
+            } else if (bundle && [bundle hasPrefix:@"com.apple."]) {
+                // (2) behavior path: an Apple system search field we can rewrite.
+                CFTypeRef subRef = NULL, valRef = NULL, rngRef = NULL;
+                AXUIElementCopyAttributeValue(focused, kAXSubroleAttribute, &subRef);
+                bool isSearch = (subRef && CFGetTypeID(subRef) == CFStringGetTypeID() &&
+                                 [(__bridge NSString*)subRef isEqualToString:(__bridge NSString*)kAXSearchFieldSubrole]);
+                bool canVal = (AXUIElementCopyAttributeValue(focused, kAXValueAttribute, &valRef) == kAXErrorSuccess &&
+                               valRef && CFGetTypeID(valRef) == CFStringGetTypeID());
+                bool canRng = (AXUIElementCopyAttributeValue(focused, kAXSelectedTextRangeAttribute, &rngRef) == kAXErrorSuccess &&
+                               rngRef && CFGetTypeID(rngRef) == AXValueGetTypeID());
+                if (isSearch && canVal && canRng)
+                    gAxFocusIsTarget = true;
+                if (subRef) CFRelease(subRef);
+                if (valRef) CFRelease(valRef);
+                if (rngRef) CFRelease(rngRef);
+            }
         }
         CFRelease(focused);
     }
@@ -744,28 +777,39 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
             }
             return event;
         } else if (pData->code == vWillProcess || pData->code == vRestore || pData->code == vRestoreAndStartNewSession) {
-            // Spotlight (and similar async text fields) drop an injected
-            // backspace, so for a clean N->N character replacement, do it
-            // atomically via the Accessibility API. The gate scopes this to
-            // vWillProcess in Spotlight only; any failure falls through to the
-            // normal CGEvent backspace+insert path below, leaving other apps
-            // unaffected. Ported from OpenKey.mm (tuyenvm/OpenKey, GPLv3).
-            if (vFixSpotlight && vCodeTable == 0 && pData->code == vWillProcess &&
-                pData->extCode != 4 && pData->backspaceCount > 0 &&
-                pData->backspaceCount == pData->newCharCount && pData->backspaceCount < MAX_BUFF &&
-                isAXReplaceTargetFocused()) {
-                if (replaceFocusedTextViaAX(pData->backspaceCount, buildAXReplacementString())) {
+            // Spotlight (and similar system search overlays) drop injected
+            // backspaces, corrupting transforms (e.g. "chúng" -> "chuúng" on
+            // macOS 27, where the field is owned by com.apple.campo). When the
+            // focused element is such a target we never use plain backspaces:
+            //   - clean N->N Unicode mark change: rewrite atomically via the
+            //     Accessibility API (best — no visible caret motion);
+            //   - otherwise (N!=M, VNI, or an AX failure): select the chars to
+            //     replace with Shift+Left and overwrite them via the normal
+            //     SendNewCharString below.
+            // Any non-target app falls through to the Chromium / CGEvent paths
+            // unchanged. Ported from OpenKey.mm (tuyenvm/OpenKey, GPLv3).
+            bool axTarget = (vFixSpotlight && pData->extCode != 4 &&
+                             pData->backspaceCount > 0 && pData->backspaceCount < MAX_BUFF &&
+                             isAXReplaceTargetFocused());
+            if (axTarget) {
+                if (vCodeTable == 0 && pData->code == vWillProcess &&
+                    pData->backspaceCount == pData->newCharCount &&
+                    replaceFocusedTextViaAX(pData->backspaceCount, buildAXReplacementString())) {
                     return NULL;
                 }
-            }
-
-            // fix autocomplete. The Chromium omnibox swallows injected
-            // backspaces (inline-autocomplete), corrupting transforms such as
-            // "đủ" -> "dđủ". Auto-apply the Shift+Left replace in Chromium
-            // browsers so URL-bar typing is correct out of the box; the global
-            // vFixRecommendBrowser still forces the empty-char fix in any other
-            // app the user opted into.
-            if (pData->extCode != 4) {
+                // Select-and-overwrite fallback: pick the chars with Shift+Left,
+                // then let SendNewCharString type over the selection (bsp=0 so
+                // the swallow-prone backspace loop below is skipped).
+                for (gI = 0; gI < pData->backspaceCount; gI++)
+                    SendShiftAndLeftArrow();
+                pData->backspaceCount = 0;
+            } else if (pData->extCode != 4) {
+                // fix autocomplete. The Chromium omnibox swallows injected
+                // backspaces (inline-autocomplete), corrupting transforms such as
+                // "đủ" -> "dđủ". Auto-apply the Shift+Left replace in Chromium
+                // browsers so URL-bar typing is correct out of the box; the global
+                // vFixRecommendBrowser still forces the empty-char fix in any other
+                // app the user opted into.
                 if (isChromiumBrowserApp(FRONT_APP)) {
                     if (pData->backspaceCount > 0) {
                         SendShiftAndLeftArrow();

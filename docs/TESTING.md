@@ -77,6 +77,24 @@ Tip: build the app with a stable signing identity (`tools/package.sh` re-signs
 with your Developer ID / Apple Development automatically) so the Accessibility
 grant **persists across rebuilds** instead of being lost each time.
 
+### System search fields (async, backspace-swallowing)
+
+Some system fields apply inline-autocomplete and **drop injected backspaces**, so
+a transform like `chúng` would come out `chuúng` (or `đủ` → `dđủ` in a URL bar)
+unless we rewrite text differently. Two manual harnesses cover these:
+
+```sh
+bash tools/e2e_spotlight.sh            # Spotlight (Cmd+Space): chungs -> chúng
+bash tools/e2e_url_bar.sh              # Chromium omnibox:       ddur   -> đủ
+```
+
+The Spotlight field is owned by `com.apple.Spotlight` on older macOS and by
+`com.apple.campo` on macOS 26/27 (Tahoe); `InputController.mm` detects either by
+bundle id **and** by AX behavior (an Apple search field exposing value + selected
+range), then replaces text atomically via the Accessibility API — falling back to
+a Shift+Left select-and-overwrite when the atomic path can't run. Same terminal
+Accessibility + Automation requirement as `e2e_type.sh`.
+
 ### Per-keystroke diagnostics
 
 Run the app binary with `KEY84_TRACE=1` to log what the engine decided for each
