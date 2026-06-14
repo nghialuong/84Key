@@ -234,6 +234,14 @@ int main() {
     // (The rendered "quảng" in TEST_CASES drops the ă; "quẳng" matches the keys+note.)
     expectEq(st, "A24", "quawngr", "quẳng");
     expectEq(st, "A25", "dduwowngf", "đường");
+    // A26: words from the macOS-27 Spotlight repro "chúng ta là áng mây". The
+    // engine output is correct on every platform — the host layer (Spotlight on
+    // com.apple.campo) was dropping injected backspaces; these lock the engine
+    // contract so a host-side regression can't be blamed on the engine.
+    expectEq(st, "A26a", "chungs", "chúng");
+    expectEq(st, "A26b", "laf", "là");
+    expectEq(st, "A26c", "angs", "áng");
+    expectEq(st, "A26d", "maay", "mây");
 
     printf("\n== B. Vietnamese typing — VNI ==\n");
     resetOptions();
