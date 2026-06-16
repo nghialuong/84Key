@@ -82,14 +82,6 @@ NSArray* gUnicodeCompoundApp = @[@"com.apple.",
                                  @"com.microsoft.edgemac.Dev", @"com.microsoft.edgemac.Beta",
                                  @"com.microsoft.Edge.Dev", @"com.microsoft.Edge"];
 
-// Chromium-family browsers whose omnibox inline-autocomplete swallows injected
-// backspaces (e.g. "đủ" -> "dđủ" in the address bar). We auto-apply the
-// Shift+Left replace here so URL-bar typing works without the global
-// vFixRecommendBrowser toggle (which pollutes ordinary text fields). Prefix
-// match so release channels (Chrome Canary, Edge Beta, ...) are covered too.
-NSArray* gChromiumBrowserApp = @[@"com.google.Chrome", @"com.brave.Browser",
-                                 @"com.microsoft.Edge", @"com.microsoft.edgemac"];
-
 CGEventSourceRef gEventSource = NULL;
 vKeyHookState* pData = NULL;
 CGEventRef gBackSpaceDown = NULL;
@@ -131,12 +123,6 @@ AXUIElementRef gAxSystemWide = NULL;
 bool gAxFocusIsTarget = false;     // cached: is the focused element owned by an gAxReplaceApp?
 double gAxFocusCheckedAt = 0;      // cache timestamp (seconds)
 
-// Web-content-editor fix: cached result of isWebContentEditorFocused() — is the
-// Chromium focus inside a web page (e.g. Google Docs) rather than the omnibox?
-// Such in-page editors are async and drop the single-Shift+Left omnibox hack.
-bool gWebContentIsTarget = false;
-double gWebContentCheckedAt = 0;
-
 #define FRONT_APP ([[NSWorkspace sharedWorkspace] frontmostApplication].bundleIdentifier)
 
 BOOL containUnicodeCompoundApp(NSString* topApp) {
@@ -149,9 +135,24 @@ BOOL containUnicodeCompoundApp(NSString* topApp) {
     return false;
 }
 
-BOOL isChromiumBrowserApp(NSString* topApp) {
+// Web browsers whose pages (Google Docs, contenteditable) and address bars
+// mishandle a plain backspace+insert fired in one burst: the async web layer
+// applies the insert before the deletion, so the doubled-tone restore
+// "garr"->"gar" surfaces as "gảar". For these we use the OpenKey-style empty-char
+// prefix + paced backspaces. Prefix match so
+// release channels (Chrome Canary, Edge Beta, Arc, ...) are covered. Safari is
+// omitted on purpose — its content areas need char-by-char, handled elsewhere.
+NSArray* gBrowserApp = @[@"com.google.Chrome", @"org.chromium.Chromium",
+                         @"com.brave.Browser", @"com.microsoft.Edge", @"com.microsoft.edgemac",
+                         @"com.vivaldi.Vivaldi", @"com.operasoftware.Opera", @"com.opera.Opera",
+                         @"company.thebrowser.Browser", @"company.thebrowser.Arc",
+                         @"company.thebrowser.dia", @"org.mozilla.firefox",
+                         @"ai.perplexity.comet", @"com.openai.atlas",
+                         @"com.duckduckgo.macos.browser", @"ru.yandex.desktop.yandex-browser"];
+
+BOOL isBrowserApp(NSString* topApp) {
     if (topApp == nil) return false;
-    for (NSString* b in gChromiumBrowserApp)
+    for (NSString* b in gBrowserApp)
         if ([topApp hasPrefix:b]) return true;
     return false;
 }
@@ -538,74 +539,6 @@ bool isAXReplaceTargetFocused() {
     return gAxFocusIsTarget;
 }
 
-// Is the Chromium focus inside a web page (Google Docs, contenteditable,
-// textarea) rather than the address bar? The omnibox is a native AXTextField
-// where the single-Shift+Left backspace hack works; in-page editors live under
-// an AXWebArea and are async — they drop that hack, corrupting transforms such
-// as the doubled-tone restore "garr" -> "gar" (which surfaces as "gảar"). We
-// route those off the omnibox path and back to plain backspaces. Cached 0.15s
-// like isAXReplaceTargetFocused(); any AX failure returns false (keep current
-// behavior). Only ever true inside a Chromium browser.
-bool isWebContentEditorFocused() {
-    double now = CFAbsoluteTimeGetCurrent();
-    if (now - gWebContentCheckedAt < 0.15)
-        return gWebContentIsTarget;
-    gWebContentCheckedAt = now;
-    gWebContentIsTarget = false;
-
-    if (gAxSystemWide == NULL) {
-        gAxSystemWide = AXUIElementCreateSystemWide();
-        AXUIElementSetMessagingTimeout(gAxSystemWide, 0.05f);
-    }
-    AXUIElementRef focused = NULL;
-    if (AXUIElementCopyAttributeValue(gAxSystemWide, kAXFocusedUIElementAttribute, (CFTypeRef*)&focused) != kAXErrorSuccess || !focused)
-        return false;
-
-    pid_t pid = 0;
-    if (AXUIElementGetPid(focused, &pid) == kAXErrorSuccess && pid > 0) {
-        NSRunningApplication* app = [NSRunningApplication runningApplicationWithProcessIdentifier:pid];
-        if (isChromiumBrowserApp(app.bundleIdentifier)) {
-            // The omnibox is an AXTextField / AXComboBox: leave it on the
-            // existing Shift+Left hack (which it needs). Anything else in a
-            // browser that we are correcting is page content.
-            CFTypeRef roleRef = NULL;
-            NSString* role = nil;
-            if (AXUIElementCopyAttributeValue(focused, kAXRoleAttribute, &roleRef) == kAXErrorSuccess &&
-                roleRef && CFGetTypeID(roleRef) == CFStringGetTypeID())
-                role = (__bridge NSString*)roleRef;
-
-            bool isOmnibox = (role && ([role isEqualToString:(__bridge NSString*)kAXTextFieldRole] ||
-                                       [role isEqualToString:(__bridge NSString*)kAXComboBoxRole]));
-            if (!isOmnibox) {
-                // Confirm it's really web content by finding an AXWebArea
-                // ancestor (bounded walk). This avoids treating native browser
-                // chrome (find bar, etc.) as a web editor.
-                AXUIElementRef cur = focused;
-                CFRetain(cur);
-                for (int depth = 0; depth < 6 && cur; depth++) {
-                    CFTypeRef rRef = NULL;
-                    bool isWebArea = false;
-                    if (AXUIElementCopyAttributeValue(cur, kAXRoleAttribute, &rRef) == kAXErrorSuccess &&
-                        rRef && CFGetTypeID(rRef) == CFStringGetTypeID())
-                        isWebArea = [(__bridge NSString*)rRef isEqualToString:@"AXWebArea"];
-                    if (rRef) CFRelease(rRef);
-                    if (isWebArea) { gWebContentIsTarget = true; break; }
-                    AXUIElementRef parent = NULL;
-                    if (AXUIElementCopyAttributeValue(cur, kAXParentAttribute, (CFTypeRef*)&parent) != kAXErrorSuccess || !parent) {
-                        CFRelease(cur); cur = NULL; break;
-                    }
-                    CFRelease(cur);
-                    cur = parent;
-                }
-                if (cur) CFRelease(cur);
-            }
-            if (roleRef) CFRelease(roleRef);
-        }
-    }
-    CFRelease(focused);
-    return gWebContentIsTarget;
-}
-
 // Build the replacement string (Unicode only) from the engine's charData, which
 // is stored right-to-left; mirrors the decode in SendNewCharString.
 NSString* buildAXReplacementString() {
@@ -837,10 +770,10 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
         // the engine decided per keystroke (for diagnosing live-app issues).
         static bool gTrace = (getenv("KEY84_TRACE") != NULL);
         if (gTrace) {
-            NSLog(@"84Key[trace] kc=%d code=%d bsp=%d ncc=%d ext=%d vCT=%d fixRec=%d other=%d",
+            NSLog(@"84Key[trace] kc=%d code=%d bsp=%d ncc=%d ext=%d vCT=%d fixRec=%d other=%d front=%@",
                   (int)gKeycode, (int)pData->code, (int)pData->backspaceCount,
                   (int)pData->newCharCount, (int)pData->extCode, vCodeTable,
-                  vFixRecommendBrowser, vOtherLanguage);
+                  vFixRecommendBrowser, vOtherLanguage, FRONT_APP);
         }
         if (pData->code == vDoNothing) { // do nothing
             if (IS_DOUBLE_CODE(vCodeTable)) { // VNI
@@ -874,6 +807,7 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
             bool axTarget = (vFixSpotlight && pData->extCode != 4 &&
                              pData->backspaceCount > 0 && pData->backspaceCount < MAX_BUFF &&
                              isAXReplaceTargetFocused());
+            bool webEditor = false;  // async in-page web editor (Google Docs); set below
             if (axTarget) {
                 if (vCodeTable == 0 && pData->code == vWillProcess &&
                     pData->backspaceCount == pData->newCharCount &&
@@ -887,35 +821,36 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                     SendShiftAndLeftArrow();
                 pData->backspaceCount = 0;
             } else if (pData->extCode != 4) {
-                // fix autocomplete. The Chromium omnibox swallows injected
-                // backspaces (inline-autocomplete), corrupting transforms such as
-                // "đủ" -> "dđủ". Auto-apply the Shift+Left replace in Chromium
-                // browsers so URL-bar typing is correct out of the box; the global
-                // vFixRecommendBrowser still forces the empty-char fix in any other
-                // app the user opted into.
-                // The Shift+Left hack is only correct for the omnibox. Inside a
-                // web page editor (Google Docs, contenteditable) it races the
-                // async editor and drops the deletion ("garr" -> "gảar"), so we
-                // skip it there and fall through to plain backspaces below — the
-                // same path ordinary text fields use. Gated by vFixWebContentEditor.
-                if (isChromiumBrowserApp(FRONT_APP) &&
-                    !(vFixWebContentEditor && isWebContentEditorFocused())) {
-                    if (pData->backspaceCount > 0) {
-                        SendShiftAndLeftArrow();
-                        if (pData->backspaceCount == 1)
-                            pData->backspaceCount--;
-                    }
+                // Browsers — the omnibox AND in-page editors like Google Docs —
+                // mishandle a plain backspace+insert fired in one burst: the async
+                // web layer applies the insert before the deletion, so "đủ"->"dđủ"
+                // in the address bar and the doubled-tone restore "garr"->"gar"
+                // surface as "gảar" in Docs. The fix (OpenKey lineage) is an
+                // empty-char prefix (U+202F) that breaks the
+                // autocomplete/composition state, then paced backspaces + text (the
+                // pacing is applied in the backspace loop below). Gated by
+                // vFixWebContentEditor (on by default).
+                if (vFixWebContentEditor && isBrowserApp(FRONT_APP)) {
+                    webEditor = true;
+                    SendEmptyCharacter();
+                    pData->backspaceCount++;   // also delete the empty char
                 } else if (vFixRecommendBrowser) {
                     SendEmptyCharacter();
                     pData->backspaceCount++;
                 }
             }
 
-            // send backspace
+            // send backspace. An async web editor (Google Docs) needs each
+            // delete to settle before the next event, and a gap before the
+            // insert — otherwise the replacement lands before the deletion and
+            // the restore "garr"->"gar" shows as "gảar". Pace it for web editors;
+            // every other app keeps the original tight, delay-free path.
             if (pData->backspaceCount > 0 && pData->backspaceCount < MAX_BUFF) {
                 for (gI = 0; gI < pData->backspaceCount; gI++) {
                     SendBackspace();
+                    if (webEditor) usleep(3000);  // 3ms between deletes
                 }
+                if (webEditor) usleep(8000);      // settle before the insert
             }
 
             // send new character
