@@ -1,0 +1,12 @@
+# Doubled tone-key escape mid-word (no word break): a repeated Telex tone key
+# clears the mark and restores the literal letter. r=hỏi, s=sắc, f=huyền,
+# x=ngã, j=nặng. These are non-dictionary strings resolved at the keystroke.
+# Regression for the Google Docs "garr" -> "gảar" report (host delivery bug).
+@input=telex
+@detect=off
+garr => gar
+barr => bar
+arr => ar
+horr => hor
+gass => gas
+buff => buf

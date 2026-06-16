@@ -347,6 +347,14 @@ int main() {
         {"oww",  "oww",    "ow"},
         {"aa",   "aa",     "â"},
         {"aaa",  "aaa",    "aa"},
+        // Doubled tone key restores the literal letter mid-word (no break):
+        // r = hỏi, so "garr" = g,a,r(->gả),r(restore) -> "gar". Same shape as
+        // the "iss"/"uss" cases but resolved at the keystroke, not the break.
+        // Regression for the Google Docs "garr" -> "gảar" report.
+        {"garr", "garr",   "gar"},
+        {"barr", "barr",   "bar"},
+        {"arr",  "arr",    "ar"},
+        {"Garr", "Garr",   "Gar"},     // capitalized base consonant
     };
     for (auto& c : reported) run(st, c);
 
