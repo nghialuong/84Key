@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-06-16
+
+### Fixed
+
+- **Google Docs (and browser fields) typing**: in browsers, a backspace fired
+  back-to-back with the replacement was dropped by the async web layer — the
+  insert landed before the deletion — so the doubled-tone restore "garr" → "gar"
+  came out "gảar". Browser corrections now emit an empty character (U+202F) to
+  reset the autocomplete/composition state, then paced backspaces before the
+  insert. One mechanism now fixes both the address bar ("đủ" no longer "dđủ") and
+  in-page editors like Google Docs.
+
 ## [0.1.3] - 2026-06-14
 
 ### Fixed
