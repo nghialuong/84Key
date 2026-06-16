@@ -52,6 +52,10 @@ osascript <<OSA >/dev/null
 tell application "$APP" to activate
 delay 0.8
 tell application "System Events"
+    keystroke "a" using command down   -- clear the doc body first so the
+    delay 0.2                          -- read-back reflects only this run
+    key code 51                        -- (Delete) — avoids stale text from a
+    delay 0.3                          -- previous invocation
     keystroke "$KEYS"                  -- real CGEvents -> 84Key tap transforms
     delay 1.0                          -- Docs editor is async; give it time
     keystroke "a" using command down   -- select all in the document body
