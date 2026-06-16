@@ -43,6 +43,7 @@ extern int vSendKeyStepByStep;
 extern int vFixChromiumBrowser;
 extern int vPerformLayoutCompat;
 extern int vFixSpotlight;
+extern int vFixWebContentEditor;
 
 // Notification posted (on the main queue) when the VI/EN switch hotkey toggles the
 // language, so the SwiftUI layer can mirror the change in the menu bar / Settings.
@@ -129,6 +130,12 @@ NSArray* gAxReplaceApp = @[@"com.apple.Spotlight", @"com.apple.campo"];
 AXUIElementRef gAxSystemWide = NULL;
 bool gAxFocusIsTarget = false;     // cached: is the focused element owned by an gAxReplaceApp?
 double gAxFocusCheckedAt = 0;      // cache timestamp (seconds)
+
+// Web-content-editor fix: cached result of isWebContentEditorFocused() — is the
+// Chromium focus inside a web page (e.g. Google Docs) rather than the omnibox?
+// Such in-page editors are async and drop the single-Shift+Left omnibox hack.
+bool gWebContentIsTarget = false;
+double gWebContentCheckedAt = 0;
 
 #define FRONT_APP ([[NSWorkspace sharedWorkspace] frontmostApplication].bundleIdentifier)
 
@@ -279,6 +286,10 @@ void SendShiftAndLeftArrow() {
     CGEventRef eventVkeyUp = CGEventCreateKeyboardEvent(gEventSource, KEY_LEFT, false);
     CGEventFlags privateFlag = CGEventGetFlags(eventVkeyDown);
     privateFlag |= kCGEventFlagMaskShift;
+    // Don't let the window server coalesce this selection key with the insert
+    // that immediately follows — async web editors (Google Docs) otherwise apply
+    // the insert before the selection lands, dropping the deletion.
+    privateFlag |= kCGEventFlagMaskNonCoalesced;
     CGEventSetFlags(eventVkeyDown, privateFlag);
     CGEventSetFlags(eventVkeyUp, privateFlag);
 
@@ -375,6 +386,10 @@ void SendNewCharString(const bool& dataFromMacro = false, const Uint16& offset =
     gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
     CGEventKeyboardSetUnicodeString(gNewEventDown, gWillContinueSending ? 16 : gNewCharSize - offset, gNewCharString);
     CGEventKeyboardSetUnicodeString(gNewEventUp, gWillContinueSending ? 16 : gNewCharSize - offset, gNewCharString);
+    // Non-coalesced so the preceding backspace/selection isn't merged with this
+    // insert by the window server (async web editors otherwise drop the delete).
+    CGEventSetFlags(gNewEventDown, CGEventGetFlags(gNewEventDown) | kCGEventFlagMaskNonCoalesced);
+    CGEventSetFlags(gNewEventUp, CGEventGetFlags(gNewEventUp) | kCGEventFlagMaskNonCoalesced);
     CGEventTapPostEvent(gProxy, gNewEventDown);
     CGEventTapPostEvent(gProxy, gNewEventUp);
     CFRelease(gNewEventDown);
@@ -521,6 +536,74 @@ bool isAXReplaceTargetFocused() {
         CFRelease(focused);
     }
     return gAxFocusIsTarget;
+}
+
+// Is the Chromium focus inside a web page (Google Docs, contenteditable,
+// textarea) rather than the address bar? The omnibox is a native AXTextField
+// where the single-Shift+Left backspace hack works; in-page editors live under
+// an AXWebArea and are async — they drop that hack, corrupting transforms such
+// as the doubled-tone restore "garr" -> "gar" (which surfaces as "gảar"). We
+// route those off the omnibox path and back to plain backspaces. Cached 0.15s
+// like isAXReplaceTargetFocused(); any AX failure returns false (keep current
+// behavior). Only ever true inside a Chromium browser.
+bool isWebContentEditorFocused() {
+    double now = CFAbsoluteTimeGetCurrent();
+    if (now - gWebContentCheckedAt < 0.15)
+        return gWebContentIsTarget;
+    gWebContentCheckedAt = now;
+    gWebContentIsTarget = false;
+
+    if (gAxSystemWide == NULL) {
+        gAxSystemWide = AXUIElementCreateSystemWide();
+        AXUIElementSetMessagingTimeout(gAxSystemWide, 0.05f);
+    }
+    AXUIElementRef focused = NULL;
+    if (AXUIElementCopyAttributeValue(gAxSystemWide, kAXFocusedUIElementAttribute, (CFTypeRef*)&focused) != kAXErrorSuccess || !focused)
+        return false;
+
+    pid_t pid = 0;
+    if (AXUIElementGetPid(focused, &pid) == kAXErrorSuccess && pid > 0) {
+        NSRunningApplication* app = [NSRunningApplication runningApplicationWithProcessIdentifier:pid];
+        if (isChromiumBrowserApp(app.bundleIdentifier)) {
+            // The omnibox is an AXTextField / AXComboBox: leave it on the
+            // existing Shift+Left hack (which it needs). Anything else in a
+            // browser that we are correcting is page content.
+            CFTypeRef roleRef = NULL;
+            NSString* role = nil;
+            if (AXUIElementCopyAttributeValue(focused, kAXRoleAttribute, &roleRef) == kAXErrorSuccess &&
+                roleRef && CFGetTypeID(roleRef) == CFStringGetTypeID())
+                role = (__bridge NSString*)roleRef;
+
+            bool isOmnibox = (role && ([role isEqualToString:(__bridge NSString*)kAXTextFieldRole] ||
+                                       [role isEqualToString:(__bridge NSString*)kAXComboBoxRole]));
+            if (!isOmnibox) {
+                // Confirm it's really web content by finding an AXWebArea
+                // ancestor (bounded walk). This avoids treating native browser
+                // chrome (find bar, etc.) as a web editor.
+                AXUIElementRef cur = focused;
+                CFRetain(cur);
+                for (int depth = 0; depth < 6 && cur; depth++) {
+                    CFTypeRef rRef = NULL;
+                    bool isWebArea = false;
+                    if (AXUIElementCopyAttributeValue(cur, kAXRoleAttribute, &rRef) == kAXErrorSuccess &&
+                        rRef && CFGetTypeID(rRef) == CFStringGetTypeID())
+                        isWebArea = [(__bridge NSString*)rRef isEqualToString:@"AXWebArea"];
+                    if (rRef) CFRelease(rRef);
+                    if (isWebArea) { gWebContentIsTarget = true; break; }
+                    AXUIElementRef parent = NULL;
+                    if (AXUIElementCopyAttributeValue(cur, kAXParentAttribute, (CFTypeRef*)&parent) != kAXErrorSuccess || !parent) {
+                        CFRelease(cur); cur = NULL; break;
+                    }
+                    CFRelease(cur);
+                    cur = parent;
+                }
+                if (cur) CFRelease(cur);
+            }
+            if (roleRef) CFRelease(roleRef);
+        }
+    }
+    CFRelease(focused);
+    return gWebContentIsTarget;
 }
 
 // Build the replacement string (Unicode only) from the engine's charData, which
@@ -810,7 +893,13 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                 // browsers so URL-bar typing is correct out of the box; the global
                 // vFixRecommendBrowser still forces the empty-char fix in any other
                 // app the user opted into.
-                if (isChromiumBrowserApp(FRONT_APP)) {
+                // The Shift+Left hack is only correct for the omnibox. Inside a
+                // web page editor (Google Docs, contenteditable) it races the
+                // async editor and drops the deletion ("garr" -> "gảar"), so we
+                // skip it there and fall through to plain backspaces below — the
+                // same path ordinary text fields use. Gated by vFixWebContentEditor.
+                if (isChromiumBrowserApp(FRONT_APP) &&
+                    !(vFixWebContentEditor && isWebContentEditorFocused())) {
                     if (pData->backspaceCount > 0) {
                         SendShiftAndLeftArrow();
                         if (pData->backspaceCount == 1)
@@ -862,10 +951,16 @@ void ensureEngineInitialized() {
     if (gEventSource == NULL)
         gEventSource = CGEventSourceCreate(kCGEventSourceStatePrivate);
     pData = (vKeyHookState*)vKeyInit();
-    if (gBackSpaceDown == NULL)
+    if (gBackSpaceDown == NULL) {
         gBackSpaceDown = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, true);
-    if (gBackSpaceUp == NULL)
+        // Keep each backspace a distinct event so async web editors (Google Docs)
+        // can't coalesce it away before the replacement insert arrives.
+        CGEventSetFlags(gBackSpaceDown, CGEventGetFlags(gBackSpaceDown) | kCGEventFlagMaskNonCoalesced);
+    }
+    if (gBackSpaceUp == NULL) {
         gBackSpaceUp = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, false);
+        CGEventSetFlags(gBackSpaceUp, CGEventGetFlags(gBackSpaceUp) | kCGEventFlagMaskNonCoalesced);
+    }
 }
 
 } // namespace
@@ -962,6 +1057,7 @@ void ensureEngineInitialized() {
         SET_IF(vAllowConsonantZFWJ) SET_IF(vQuickStartConsonant) SET_IF(vQuickEndConsonant)
         SET_IF(vAutoDetectEnglish) SET_IF(vOtherLanguage)
         SET_IF(vFixSpotlight) SET_IF(vSendKeyStepByStep) SET_IF(vFixChromiumBrowser)
+        SET_IF(vFixWebContentEditor)
         SET_IF(vPerformLayoutCompat) SET_IF(vSwitchKeyStatus)
         #undef SET_IF
     }

@@ -58,3 +58,9 @@ int vPerformLayoutCompat = 0;
 // atomic-replace path is implemented in T14. Defined here so the ported code
 // compiles; the AX behavior itself is intentionally not implemented yet.
 int vFixSpotlight = 1;
+// In-page web editors (Google Docs, contenteditable) are async and drop the
+// Chromium omnibox Shift+Left backspace hack, corrupting transforms such as the
+// doubled-tone restore "garr" -> "gar" (seen as "gảar"). When on, such editors
+// are routed back to plain backspaces. On by default; escape hatch if a future
+// web app regresses.
+int vFixWebContentEditor = 1;
