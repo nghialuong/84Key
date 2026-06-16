@@ -43,6 +43,7 @@ extern int vSendKeyStepByStep;
 extern int vFixChromiumBrowser;
 extern int vPerformLayoutCompat;
 extern int vFixSpotlight;
+extern int vFixWebContentEditor;
 
 // Notification posted (on the main queue) when the VI/EN switch hotkey toggles the
 // language, so the SwiftUI layer can mirror the change in the menu bar / Settings.
@@ -80,14 +81,6 @@ NSArray* gUnicodeCompoundApp = @[@"com.apple.",
                                  @"com.google.Chrome", @"com.brave.Browser",
                                  @"com.microsoft.edgemac.Dev", @"com.microsoft.edgemac.Beta",
                                  @"com.microsoft.Edge.Dev", @"com.microsoft.Edge"];
-
-// Chromium-family browsers whose omnibox inline-autocomplete swallows injected
-// backspaces (e.g. "đủ" -> "dđủ" in the address bar). We auto-apply the
-// Shift+Left replace here so URL-bar typing works without the global
-// vFixRecommendBrowser toggle (which pollutes ordinary text fields). Prefix
-// match so release channels (Chrome Canary, Edge Beta, ...) are covered too.
-NSArray* gChromiumBrowserApp = @[@"com.google.Chrome", @"com.brave.Browser",
-                                 @"com.microsoft.Edge", @"com.microsoft.edgemac"];
 
 CGEventSourceRef gEventSource = NULL;
 vKeyHookState* pData = NULL;
@@ -142,9 +135,24 @@ BOOL containUnicodeCompoundApp(NSString* topApp) {
     return false;
 }
 
-BOOL isChromiumBrowserApp(NSString* topApp) {
+// Web browsers whose pages (Google Docs, contenteditable) and address bars
+// mishandle a plain backspace+insert fired in one burst: the async web layer
+// applies the insert before the deletion, so the doubled-tone restore
+// "garr"->"gar" surfaces as "gảar". For these we use the OpenKey-style empty-char
+// prefix + paced backspaces. Prefix match so
+// release channels (Chrome Canary, Edge Beta, Arc, ...) are covered. Safari is
+// omitted on purpose — its content areas need char-by-char, handled elsewhere.
+NSArray* gBrowserApp = @[@"com.google.Chrome", @"org.chromium.Chromium",
+                         @"com.brave.Browser", @"com.microsoft.Edge", @"com.microsoft.edgemac",
+                         @"com.vivaldi.Vivaldi", @"com.operasoftware.Opera", @"com.opera.Opera",
+                         @"company.thebrowser.Browser", @"company.thebrowser.Arc",
+                         @"company.thebrowser.dia", @"org.mozilla.firefox",
+                         @"ai.perplexity.comet", @"com.openai.atlas",
+                         @"com.duckduckgo.macos.browser", @"ru.yandex.desktop.yandex-browser"];
+
+BOOL isBrowserApp(NSString* topApp) {
     if (topApp == nil) return false;
-    for (NSString* b in gChromiumBrowserApp)
+    for (NSString* b in gBrowserApp)
         if ([topApp hasPrefix:b]) return true;
     return false;
 }
@@ -279,6 +287,10 @@ void SendShiftAndLeftArrow() {
     CGEventRef eventVkeyUp = CGEventCreateKeyboardEvent(gEventSource, KEY_LEFT, false);
     CGEventFlags privateFlag = CGEventGetFlags(eventVkeyDown);
     privateFlag |= kCGEventFlagMaskShift;
+    // Don't let the window server coalesce this selection key with the insert
+    // that immediately follows — async web editors (Google Docs) otherwise apply
+    // the insert before the selection lands, dropping the deletion.
+    privateFlag |= kCGEventFlagMaskNonCoalesced;
     CGEventSetFlags(eventVkeyDown, privateFlag);
     CGEventSetFlags(eventVkeyUp, privateFlag);
 
@@ -375,6 +387,10 @@ void SendNewCharString(const bool& dataFromMacro = false, const Uint16& offset =
     gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
     CGEventKeyboardSetUnicodeString(gNewEventDown, gWillContinueSending ? 16 : gNewCharSize - offset, gNewCharString);
     CGEventKeyboardSetUnicodeString(gNewEventUp, gWillContinueSending ? 16 : gNewCharSize - offset, gNewCharString);
+    // Non-coalesced so the preceding backspace/selection isn't merged with this
+    // insert by the window server (async web editors otherwise drop the delete).
+    CGEventSetFlags(gNewEventDown, CGEventGetFlags(gNewEventDown) | kCGEventFlagMaskNonCoalesced);
+    CGEventSetFlags(gNewEventUp, CGEventGetFlags(gNewEventUp) | kCGEventFlagMaskNonCoalesced);
     CGEventTapPostEvent(gProxy, gNewEventDown);
     CGEventTapPostEvent(gProxy, gNewEventUp);
     CFRelease(gNewEventDown);
@@ -754,10 +770,10 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
         // the engine decided per keystroke (for diagnosing live-app issues).
         static bool gTrace = (getenv("KEY84_TRACE") != NULL);
         if (gTrace) {
-            NSLog(@"84Key[trace] kc=%d code=%d bsp=%d ncc=%d ext=%d vCT=%d fixRec=%d other=%d",
+            NSLog(@"84Key[trace] kc=%d code=%d bsp=%d ncc=%d ext=%d vCT=%d fixRec=%d other=%d front=%@",
                   (int)gKeycode, (int)pData->code, (int)pData->backspaceCount,
                   (int)pData->newCharCount, (int)pData->extCode, vCodeTable,
-                  vFixRecommendBrowser, vOtherLanguage);
+                  vFixRecommendBrowser, vOtherLanguage, FRONT_APP);
         }
         if (pData->code == vDoNothing) { // do nothing
             if (IS_DOUBLE_CODE(vCodeTable)) { // VNI
@@ -791,6 +807,7 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
             bool axTarget = (vFixSpotlight && pData->extCode != 4 &&
                              pData->backspaceCount > 0 && pData->backspaceCount < MAX_BUFF &&
                              isAXReplaceTargetFocused());
+            bool webEditor = false;  // async in-page web editor (Google Docs); set below
             if (axTarget) {
                 if (vCodeTable == 0 && pData->code == vWillProcess &&
                     pData->backspaceCount == pData->newCharCount &&
@@ -804,29 +821,36 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                     SendShiftAndLeftArrow();
                 pData->backspaceCount = 0;
             } else if (pData->extCode != 4) {
-                // fix autocomplete. The Chromium omnibox swallows injected
-                // backspaces (inline-autocomplete), corrupting transforms such as
-                // "đủ" -> "dđủ". Auto-apply the Shift+Left replace in Chromium
-                // browsers so URL-bar typing is correct out of the box; the global
-                // vFixRecommendBrowser still forces the empty-char fix in any other
-                // app the user opted into.
-                if (isChromiumBrowserApp(FRONT_APP)) {
-                    if (pData->backspaceCount > 0) {
-                        SendShiftAndLeftArrow();
-                        if (pData->backspaceCount == 1)
-                            pData->backspaceCount--;
-                    }
+                // Browsers — the omnibox AND in-page editors like Google Docs —
+                // mishandle a plain backspace+insert fired in one burst: the async
+                // web layer applies the insert before the deletion, so "đủ"->"dđủ"
+                // in the address bar and the doubled-tone restore "garr"->"gar"
+                // surface as "gảar" in Docs. The fix (OpenKey lineage) is an
+                // empty-char prefix (U+202F) that breaks the
+                // autocomplete/composition state, then paced backspaces + text (the
+                // pacing is applied in the backspace loop below). Gated by
+                // vFixWebContentEditor (on by default).
+                if (vFixWebContentEditor && isBrowserApp(FRONT_APP)) {
+                    webEditor = true;
+                    SendEmptyCharacter();
+                    pData->backspaceCount++;   // also delete the empty char
                 } else if (vFixRecommendBrowser) {
                     SendEmptyCharacter();
                     pData->backspaceCount++;
                 }
             }
 
-            // send backspace
+            // send backspace. An async web editor (Google Docs) needs each
+            // delete to settle before the next event, and a gap before the
+            // insert — otherwise the replacement lands before the deletion and
+            // the restore "garr"->"gar" shows as "gảar". Pace it for web editors;
+            // every other app keeps the original tight, delay-free path.
             if (pData->backspaceCount > 0 && pData->backspaceCount < MAX_BUFF) {
                 for (gI = 0; gI < pData->backspaceCount; gI++) {
                     SendBackspace();
+                    if (webEditor) usleep(3000);  // 3ms between deletes
                 }
+                if (webEditor) usleep(8000);      // settle before the insert
             }
 
             // send new character
@@ -862,10 +886,16 @@ void ensureEngineInitialized() {
     if (gEventSource == NULL)
         gEventSource = CGEventSourceCreate(kCGEventSourceStatePrivate);
     pData = (vKeyHookState*)vKeyInit();
-    if (gBackSpaceDown == NULL)
+    if (gBackSpaceDown == NULL) {
         gBackSpaceDown = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, true);
-    if (gBackSpaceUp == NULL)
+        // Keep each backspace a distinct event so async web editors (Google Docs)
+        // can't coalesce it away before the replacement insert arrives.
+        CGEventSetFlags(gBackSpaceDown, CGEventGetFlags(gBackSpaceDown) | kCGEventFlagMaskNonCoalesced);
+    }
+    if (gBackSpaceUp == NULL) {
         gBackSpaceUp = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, false);
+        CGEventSetFlags(gBackSpaceUp, CGEventGetFlags(gBackSpaceUp) | kCGEventFlagMaskNonCoalesced);
+    }
 }
 
 } // namespace
@@ -962,6 +992,7 @@ void ensureEngineInitialized() {
         SET_IF(vAllowConsonantZFWJ) SET_IF(vQuickStartConsonant) SET_IF(vQuickEndConsonant)
         SET_IF(vAutoDetectEnglish) SET_IF(vOtherLanguage)
         SET_IF(vFixSpotlight) SET_IF(vSendKeyStepByStep) SET_IF(vFixChromiumBrowser)
+        SET_IF(vFixWebContentEditor)
         SET_IF(vPerformLayoutCompat) SET_IF(vSwitchKeyStatus)
         #undef SET_IF
     }
