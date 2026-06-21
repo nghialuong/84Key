@@ -19,6 +19,7 @@ jobs:
   macos-app:
     name: Build macOS app
     runs-on: macos-latest
+    if:     github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       # Build against the macOS 26 SDK (Xcode 26.x), matching the release pipeline
