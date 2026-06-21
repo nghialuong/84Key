@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-06-21
+
+### Fixed
+
+- **English typing — accent now clears immediately**: typing a word like `iss`
+  showed the accented `ís` until you pressed space, because the doubled tone key
+  (the escape that forces the literal English letters) only dropped the mark at the
+  word break. The mark is now dropped the moment the word is detected as
+  non-Vietnamese (`iss` → `is`, `ass` → `as`), so the stray accent never lingers
+  mid-word. Full English words (`issue`, `assign`, `miss`) still type out whole,
+  and the correction stays compatible with the browser/Google Docs empty-character
+  fix.
+
 ## [0.1.4] - 2026-06-16
 
 ### Fixed
