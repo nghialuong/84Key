@@ -1531,6 +1531,54 @@ static bool dropDoubledToneAtBreak(const int& handleCode) {
     return true;
 }
 
+//Keystroke-time counterpart of dropDoubledToneAtBreak(): drop a doubled-tone-key
+//mark the moment the word is known to be non-Vietnamese, instead of waiting for the
+//word break. Fires only in the English-prefix defer case ("iss"/"ass": a mark was
+//applied because the prefix is valid Vietnamese, but the repeated tone key has now
+//escaped it) — the non-prefix case ("uss") already resolves via handleMainKey's
+//normal tone toggle. Same guards as the break version (not a real English word,
+//not Vietnamese, doubled tone key), so growing Vietnamese words and single-tone
+//words are never touched. KeyStates is left intact, so restoreEnglishAtBreak() can
+//still rebuild full English words ("issue"/"assign") at the break. Must be called
+//AFTER the raw key has been inserted, so TypingWord/_index already count it; the
+//only difference from the break version is hBPC = _index - 1, because the
+//just-pressed key is not on screen yet (only _index - 1 chars are). Returns true if
+//it acted, having rewritten hCode/hBPC/hNCC/hData into a replace.
+static bool dropDoubledToneAtKeystroke() {
+    if (!engDetectEnabled() || _index < 2 || !buildEngRawFromStates())
+        return false;
+    if (isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord))
+        return false;
+
+    Uint32 markMask = 0;
+    for (i = 0; i < _index; i++) {
+        if (TypingWord[i] & MARK_MASK) { markMask = TypingWord[i] & MARK_MASK; break; }
+    }
+    if (!markMask)
+        return false;
+    Uint16 toneKey = markMask == MARK1_MASK ? KEY_S : markMask == MARK2_MASK ? KEY_F :
+                     markMask == MARK3_MASK ? KEY_R : markMask == MARK4_MASK ? KEY_X :
+                     markMask == MARK5_MASK ? KEY_J : 0;
+    if (!toneKey)
+        return false;
+
+    int toneKeyCount = 0;
+    for (i = 0; i < _stateIndex; i++)
+        if ((KeyStates[i] & CHAR_MASK) == toneKey)
+            toneKeyCount++;
+    if (toneKeyCount < 2)
+        return false;
+
+    hCode = vWillProcess;
+    hBPC = _index - 1; //the just-pressed key is not on screen yet
+    for (i = 0; i < _index; i++)
+        TypingWord[i] &= ~MARK_MASK;
+    hNCC = _index;
+    for (i = 0; i < _index; i++)
+        hData[_index - 1 - i] = GET(TypingWord[i]);
+    return true;
+}
+
 void vKeyHandleEvent(const vKeyEvent& event,
                      const vKeyEventState& state,
                      const Uint16& data,
@@ -1723,6 +1771,13 @@ void vKeyHandleEvent(const vKeyEvent& event,
                 hNCC = 0;
                 hExt = 3; //normal key
                 insertKey(data, _isCaps);
+                //Doubled-tone English escape ("iss" -> "is"): drop the stale mark now
+                //rather than at the word break, so the accent disappears as soon as the
+                //word is detected as non-Vietnamese. Self-gates; no-op otherwise. Keep
+                //hExt at 3 (normal key): this is a backspace+retype that browsers/Docs
+                //must empty-char-fix (InputController's extCode != 4 path), unlike a
+                //pure mark rearrangement.
+                dropDoubledToneAtKeystroke();
             }
         } else { //check and update key
             //restore state

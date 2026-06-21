@@ -397,9 +397,13 @@ int main() {
         {"E-ww2",  "ww done",  "w done"},
         {"E-win",  "window ",  "window "},  // leading-w English: ư restored at break
         // Double-tone-key escape: "is"->í (prefer VN), but a repeated tone key
-        // ("iss") drops the mark at the word break to give the literal English
-        // "is". Only for non-dictionary strings — real English words (miss/class/
-        // issue/assign) come out whole via detection + the word-break restore.
+        // ("iss") drops the mark to give the literal English "is" — now at the
+        // keystroke (E-iss-now/E-ass-now), so the accent never lingers, as well as
+        // at any later word break (E-iss/E-iss2). Only for non-dictionary strings —
+        // real English words (miss/class/issue/assign) come out whole via detection
+        // + the word-break restore, proving the early drop doesn't corrupt recovery.
+        {"E-iss-now", "iss",     "is"},         // no break: accent dropped immediately
+        {"E-ass-now", "ass",     "as"},
         {"E-iss",  "iss done",  "is done"},
         {"E-iss2", "iss. ok",   "is. ok"},
         {"E-ass",  "ass ",      "as "},

@@ -287,10 +287,13 @@ int main() {
     // repeated tone key drops the mark to force the literal English letters.
     // Only for non-dictionary strings; real English words come out whole via
     // detection + word-break restore (E7-E8), not via the escape.
-    // "iss"/"ass" are English prefixes (issue/assign), so the escape resolves at
-    // the word break; "uss" isn't a prefix, so it resolves at the keystroke.
+    // "iss"/"ass" are English prefixes (issue/assign): the mark is dropped at the
+    // keystroke now (E4b/E5b), not only at the word break (E4/E5). "uss" isn't a
+    // prefix, so it resolves at the keystroke via the normal tone toggle (E6).
     expectEq(st, "E4", "iss ", "is ");
     expectEq(st, "E5", "ass ", "as ");
+    expectEq(st, "E4b", "iss", "is");          // accent dropped immediately, no space
+    expectEq(st, "E5b", "ass", "as");          // accent dropped immediately, no space
     expectEq(st, "E6", "uss", "us");
     expectAscii(st, "E7", "miss", true);
     expectAscii(st, "E8", "class", true);
