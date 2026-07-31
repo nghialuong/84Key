@@ -481,6 +481,13 @@ int main() {
         // and the isVietByTelex() guard is the only thing keeping them Vietnamese.
         {"C-vn1",  "chinhs ok",    "chính ok"},
         {"C-vn2",  "choair ok",    "choải ok"},
+        // Tone key placed right after the vowel instead of at the end. Only the
+        // canonical spelling ("chieems") is in the dictionary, so these are
+        // invisible to isVietByTelexPrefix() and split into English pieces
+        // ("chi"+"seem"). rawToneReorderIsVietOnly() is what keeps them Vietnamese.
+        {"C-tone1", "chiseem ok",  "chiếm ok"},
+        {"C-tone2", "chiseen ok",  "chiến ok"},
+        {"C-tone3", "chofan ok",   "choàn ok"},
         // Neither dictionary: a drawn-out "quáaaa" must be left alone, not
         // reverted to its raw keystrokes.
         {"C-none", "quasaaa ok",   "quaaá ok"},

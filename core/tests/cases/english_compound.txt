@@ -49,6 +49,21 @@ truwowngf ok => trường ok
 chuongs ok => chuóng ok
 hocj ok => học ok
 
+# --- Telex accepts the tone key anywhere after the vowel, so "chiếm" can be
+#     typed "chiseem" as well as the canonical "chieems". Only the canonical
+#     spelling is in the dictionary, so a tone-first one is invisible to
+#     isVietByTelexPrefix() and splits cleanly into English pieces
+#     ("chi"+"seem") — it must still come out Vietnamese. Found by review; the
+#     narrow rawToneReorderIsViet() does not cover these because it also
+#     requires the canonical form to be an English word, which "chieems" is not.
+chiseem ok => chiếm ok
+chiseen ok => chiến ok
+chofan ok => choàn ok
+chojam ok => choạm ok
+choram ok => choảm ok
+buswow ok => bướ ok
+chiseem lasy ok => chiếm láy ok
+
 # --- a string in neither dictionary is left alone: the drawn-out "quáaaa" must
 #     not be reverted to raw keystrokes. This is the counter-example to the
 #     looser rule "restore anything that is not Vietnamese". ---
