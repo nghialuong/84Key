@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-07-31
+
+### Fixed
+
+- **Slow English typing with Telex enabled**: compound words assembled from known
+  English words, such as `dashboard`, `airdrop`, and `markdown`, are now restored
+  correctly at the word boundary instead of losing letters or gaining Vietnamese
+  tone marks. Valid Vietnamese Telex spellings remain protected across alternate
+  tone and modifier-key orders.
+
 ## [0.1.5] - 2026-06-21
 
 ### Fixed
