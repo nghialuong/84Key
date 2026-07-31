@@ -327,6 +327,60 @@ static void runFixtures(vKeyHookState* st, const char* dir) {
            g_fixPass, g_fixFail);
 }
 
+// ---- Contract checks for the compound splitter -----------------------------
+//
+// Property: recognising compounds must never be what decides a Vietnamese word.
+// A 3-letter piece floor keeps the overlap tiny (43 of 29644 Telex spellings at
+// the time of writing), but "tiny" is not the guarantee — the guarantee is that
+// every overlapping spelling is itself in the Vietnamese dictionary, so
+// shouldTreatAsEnglish()/restoreEnglishAtBreak() bail on it via isVietByTelex().
+// Counting instead would need the threshold retuned whenever a dictionary grows;
+// this holds regardless of size. Fails the gate if a dictionary change breaks it.
+static void checkCompoundNeverOverridesVietnamese() {
+    FILE* f = fopen("../data/viet_telex.dat", "rb");
+    if (!f) { printf("  [FAIL] C-prop  cannot open viet_telex.dat\n"); g_fail++; return; }
+    char line[128];
+    int checked = 0, leaked = 0;
+    string firstLeak;
+    while (fgets(line, sizeof line, f)) {
+        string w(line);
+        while (!w.empty() && (w.back() == '\n' || w.back() == '\r')) w.pop_back();
+        if (w.empty()) continue;
+        checked++;
+        if (!isEnglishCompound(w) && !isEnglishCompoundPrefix(w)) continue;
+        if (isVietByTelex(w) || isVietByTelexPrefix(w)) continue;
+        if (leaked++ == 0) firstLeak = w;
+    }
+    fclose(f);
+    bool ok = (leaked == 0);
+    printf("  [%s] C-prop %d Telex spellings: none read as English-only%s\n",
+           ok ? "PASS" : "FAIL", checked,
+           ok ? "" : (" (e.g. \"" + firstLeak + "\")").c_str());
+    ok ? g_pass++ : g_fail++;
+}
+
+// A compound with no transform key inside it ("imagegen") is now restore-eligible,
+// but nothing about it changed on screen — so the engine must emit ZERO events for
+// it. restoreEnglishAtBreak()'s `differs` check is what guarantees that; without it
+// every clean compound would fire a pointless backspace+retype burst at each word
+// break, and that burst is exactly what misbehaves in browsers and Spotlight.
+static void checkCleanCompoundEmitsNothing(vKeyHookState* st) {
+    vKeyInit();
+    const char* keys = "imagegen ";
+    int events = 0;
+    for (const char* p = keys; *p; p++) {
+        bool caps = false;
+        int kc = asciiToKey(*p, caps);
+        vKeyHandleEvent(vKeyEvent::Keyboard, vKeyEventState::KeyDown, (Uint16)kc, caps ? 1 : 0, false);
+        if (st->code != vDoNothing || st->backspaceCount != 0)
+            events++;
+    }
+    bool ok = (events == 0);
+    printf("  [%s] C-noop \"imagegen \" emits no backspace/rewrite (%d keystroke(s) did)\n",
+           ok ? "PASS" : "FAIL", events);
+    ok ? g_pass++ : g_fail++;
+}
+
 int main() {
     string eng, viet;
     { FILE* f = fopen("../data/english_words.dat", "rb"); if (f) { char b[65536]; size_t r; while ((r = fread(b,1,sizeof b,f))>0) eng.append(b,r); fclose(f);} }
@@ -414,6 +468,27 @@ int main() {
         {"E-is",   "is ",       "í "},        // single tone key still prefers VN
     };
     for (auto& c : english) run(st, c);
+
+    printf("\n== Compound English (dictionary holds simple words only) ==\n");
+    Case compound[] = {
+        {"C-dash", "dashboard ok", "dashboard ok"},   // dash + board
+        {"C-air",  "airdrop ok",   "airdrop ok"},     // air + drop; r ate a letter before
+        {"C-test", "testgen ok",   "testgen ok"},     // test + gen
+        {"C-conf", "confusing ok", "confusing ok"},   // conf + using
+        {"C-mark", "markdown ok",  "markdown ok"},
+        {"C-suf",  "dashboards ok", "dashboards ok"}, // key fires after a full compound
+        // Vietnamese wins: these Telex spellings do split into English pieces,
+        // and the isVietByTelex() guard is the only thing keeping them Vietnamese.
+        {"C-vn1",  "chinhs ok",    "chính ok"},
+        {"C-vn2",  "choair ok",    "choải ok"},
+        // Neither dictionary: a drawn-out "quáaaa" must be left alone, not
+        // reverted to its raw keystrokes.
+        {"C-none", "quasaaa ok",   "quaaá ok"},
+    };
+    for (auto& c : compound) run(st, c);
+
+    checkCompoundNeverOverridesVietnamese();
+    checkCleanCompoundEmitsNothing(st);
     vAutoDetectEnglish = 0;
 
     // User-supplied articles / cases dropped into core/tests/cases/*.txt

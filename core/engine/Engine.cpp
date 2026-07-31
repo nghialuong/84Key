@@ -1367,6 +1367,7 @@ static bool buildEngRawFromStates() {
 //when a transform key would otherwise fire (see the gate below), so it stays off
 //the hot path for ordinary keys.
 static bool rawDdReorderIsViet();
+static bool rawToneReorderIsViet();
 static bool shouldTreatAsEnglish() {
     if (!engDetectEnabled() || !buildEngRawFromStates())
         return false;
@@ -1389,6 +1390,24 @@ static bool shouldTreatAsEnglish() {
     //if the keystrokes could still grow into a Vietnamese word.
     if (isEnglishPrefix(_engRawWord))
         return !isVietByTelex(_engRawWord) && !isVietByTelexPrefix(_engRawWord);
+
+    //Compound typed as one token ("dashboard", "imagegen"): the dictionary only
+    //holds simple words, so past the first piece the keystrokes stop looking
+    //English and the transform keys inside start eating letters. Recognise the
+    //split instead. The two forms cover the two moments a transform key can
+    //fire inside a compound: mid-piece ("dashboar" + 'r' -> dash+boar) and on a
+    //suffix ("webhooks" + 's', where everything before the key is a compound).
+    //Stricter than the branches above: compound leaves the dictionaries behind,
+    //so rawToneReorderIsViet() is needed here to still favour a Vietnamese word
+    //typed tone-first, which isVietByTelexPrefix alone would not catch.
+    if (!isVietByTelex(_engRawWord) && !isVietByTelexPrefix(_engRawWord)
+        && !rawToneReorderIsViet()) {
+        if (isEnglishCompoundPrefix(_engRawWord))
+            return true;
+        if (_engRawWord.size() >= 7 &&
+            isEnglishCompound(_engRawWord.substr(0, _engRawWord.size() - 1)))
+            return true;
+    }
 
     return false;
 }
@@ -1466,7 +1485,10 @@ static bool restoreEnglishAtBreak(const int& handleCode) {
     //valid Vietnamese prefix (e.g. "dd" -> đ): otherwise a complete-English-word
     //digraph like "dd" would be reverted at the break, undoing the diacritic.
     //rawToneReorderIsViet() covers tone-first spellings ("ist" of "ít").
-    if (!isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord)
+    //A compound counts as English evidence too ("dashboard" = dash+board), so a
+    //diacritic applied inside one is reverted at the break like a simple word.
+    if ((!isEnglishWord(_engRawWord) && !isEnglishCompound(_engRawWord))
+        || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord)
         || rawToneReorderIsViet() || rawDdReorderIsViet())
         return false;
 

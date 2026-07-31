@@ -1,0 +1,71 @@
+# Compound English words typed as one token ("dashboard" = dash + board).
+# The dictionary only holds simple words, so past the first piece the keystrokes
+# stop looking English and the Telex transform keys inside start eating letters
+# ("dashboard" -> "dáhboard", "airdrop" -> "aidrop"). isEnglishCompound() teaches
+# both the keystroke-time check and the word-break restore to see the split.
+#
+# Every line carries a trailing token so the word actually ends: the fixture
+# reader strips trailing whitespace, and these cases are about the FINAL text
+# after a word break. Mid-word a diacritic may still flash before the restore.
+@input=telex
+@detect=on
+
+# --- were mangled before the fix ---
+testgen ok => testgen ok
+airdrop ok => airdrop ok
+webhook ok => webhook ok
+dashboard ok => dashboard ok
+markdown ok => markdown ok
+textarea ok => textarea ok
+wireframe ok => wireframe ok
+confusing ok => confusing ok
+
+# --- compounds that already came out clean (no transform key inside) ---
+imagegen ok => imagegen ok
+screenshot ok => screenshot ok
+username ok => username ok
+filename ok => filename ok
+keyboard ok => keyboard ok
+
+# --- plural/suffix: the transform key fires when everything before it is
+#     already a complete compound ---
+dashboards ok => dashboards ok
+filenames ok => filenames ok
+
+# --- the word must end on punctuation too, not only on space ---
+dashboard, ok => dashboard, ok
+airdrop. ok => airdrop. ok
+markdown! ok => markdown! ok
+
+# --- Vietnamese must NOT break. beenhs/chinhs/choair/dieeng are among the 43
+#     Telex spellings that do split into English pieces at a 3-letter floor;
+#     the isVietByTelex() guard is what keeps them Vietnamese. ---
+beenhs ok => bếnh ok
+chinhs ok => chính ok
+choair ok => choải ok
+dieeng ok => diêng ok
+banj ok => bạn ok
+truwowngf ok => trường ok
+chuongs ok => chuóng ok
+hocj ok => học ok
+
+# --- a string in neither dictionary is left alone: the drawn-out "quáaaa" must
+#     not be reverted to raw keystrokes. This is the counter-example to the
+#     looser rule "restore anything that is not Vietnamese". ---
+quasaaa ok => quaaá ok
+
+# --- existing escapes keep their behaviour ---
+iss ok => is ok
+ww ok => w ok
+miss ok => miss ok
+issue ok => issue ok
+
+# --- mixed Vietnamese + compound in one line ---
+gox dashboard cuar toi => gõ dashboard của toi
+imagegen laf gif => imagegen là gì
+
+# --- KNOWN LIMITATION (pre-existing, unchanged by this fix): "hooks" is not in
+#     the dictionary, so "webhooks" is not recognised as a compound and the
+#     leading w -> ư is never restored. Recorded so a future dictionary or
+#     splitter change shows up here instead of passing silently.
+webhooks ok => ưebhooks ok
