@@ -351,17 +351,26 @@ static void checkCompoundNeverOverridesVietnamese(vKeyHookState* st) {
         string w(line);
         while (!w.empty() && (w.back() == '\n' || w.back() == '\r')) w.pop_back();
         if (w.empty() || !isEnglishCompound(w)) continue;
+        // Ground truth: what Vietnamese typing alone produces. English detection
+        // must not change it. Taking the reference with detection OFF keeps the
+        // oracle independent of the code under test.
+        vAutoDetectEnglish = 0;
+        string want = toUtf8(typeFresh(st, w + " "));
+        vAutoDetectEnglish = 1;
+        if (want == w + " ") continue;   // no diacritic to lose; nothing to prove
         typed++;
         // A word break is what triggers the restore, so type one.
         string got = toUtf8(typeFresh(st, w + " "));
-        if (got == w + " " && leaked++ == 0)   // reverted to the raw keystrokes
-            firstLeak = w;
+        if (got != want && leaked++ == 0)
+            firstLeak = w + " -> " + got;
     }
     fclose(f);
-    bool ok = (leaked == 0);
+    const int kMinChecked = 20;   // 43 qualify today; see the note in C-order
+    bool ok = (leaked == 0 && typed >= kMinChecked);
     printf("  [%s] C-prop %d Telex spellings read as English compounds stay Vietnamese%s\n",
            ok ? "PASS" : "FAIL", typed,
-           ok ? "" : (" (\"" + firstLeak + "\" came out raw)").c_str());
+           leaked ? (" (\"" + firstLeak + "\")").c_str()
+                  : (typed < kMinChecked ? " — examined too few, the filter went vacuous" : ""));
     ok ? g_pass++ : g_fail++;
 }
 
@@ -371,6 +380,8 @@ static void checkCompoundNeverOverridesVietnamese(vKeyHookState* st) {
 // isVietByTelexPrefix(), so renderedIsViet() — which looks up the word the engine
 // produced rather than the keys typed — is the only thing keeping them Vietnamese.
 // Both regressions found while building this were of exactly this shape.
+static bool got_is_raw(const string& got, const string& v) { return got == v + " "; }
+
 static void checkAlternateKeyOrdersStayVietnamese(vKeyHookState* st) {
     FILE* f = fopen("../data/viet_telex.dat", "rb");
     if (!f) { printf("  [FAIL] C-order cannot open viet_telex.dat\n"); g_fail++; return; }
@@ -396,28 +407,51 @@ static void checkAlternateKeyOrdersStayVietnamese(vKeyHookState* st) {
                 variants.push_back(w.substr(0, k) + w.substr(k + 1) + w[k]);
 
         for (const string& v : variants) {
-            // Only orders that would otherwise be taken for English matter here,
-            // and only those the engine still renders as this very word.
-            if (v == w || !isEnglishCompound(v) || isVietByTelex(v)) continue;
-            string got = toUtf8(typeFresh(st, v + " "));
-            if (got != toUtf8(typeFresh(st, w + " "))) continue;  // renders to something else
+            // Only orders that would otherwise be taken for English matter here.
+            // isEnglishWord(v) goes down the older simple-word path instead, where
+            // a genuine English word deliberately stays English ("chosen" must not
+            // become "chọen"); this branch left that rule untouched.
+            if (v == w || !isEnglishCompound(v) || isVietByTelex(v) || isEnglishWord(v)) continue;
+            // Which variants count as a real alternate spelling of `w`, and what
+            // each should produce, are both decided with English detection OFF.
+            // That oracle cannot move when the code under test changes — deciding
+            // it from the detect-on output instead makes the check unfalsifiable:
+            // a variant that leaks to raw keystrokes no longer matches `w`, so it
+            // filters itself out and the leak counter can never fire.
+            vAutoDetectEnglish = 0;
+            string want = toUtf8(typeFresh(st, v + " "));
+            bool sameWord = (want == toUtf8(typeFresh(st, w + " ")));
+            string plainMidWord = toUtf8(typeFresh(st, v));
+            vAutoDetectEnglish = 1;
+            if (!sameWord) continue;     // a different word, or not a word at all
+            // The compound rule only acts at the break, so hold it responsible for
+            // the break alone. A variant whose prefix is an English word in its own
+            // right ("chiefeng" starts "chief") is already suppressed mid-word by
+            // the older simple-word rule; that predates this branch and baseline
+            // does the same, so it is not what this check is about.
+            if (toUtf8(typeFresh(st, v)) != plainMidWord) continue;
             typed++;
-            if (got == v + " " && leaked++ == 0)
+            // The compound rule's failure mode is one specific thing: reverting the
+            // word to the raw keystrokes. Other differences from `want` belong to
+            // other rules that predate this branch — dropDoubledToneAtBreak() drops
+            // the mark of "sieuse" because its tone key was pressed twice, and
+            // baseline does the same. With the oracle taken detect-off, this
+            // condition is reachable: removing the guard makes these come out raw.
+            if (got_is_raw(toUtf8(typeFresh(st, v + " ")), v) && leaked++ == 0)
                 firstLeak = v + " (" + w + ")";
         }
     }
     fclose(f);
-    // The "renders to this same word" filter above is what makes the check
-    // meaningful, and also what could make it vacuous: break the guard and every
-    // variant renders to something else, so nothing is examined and the check
-    // passes having tested nothing. The floor is an "I actually checked something"
-    // assertion, not a tolerance — 113 orders qualify today, and a drop to zero is
-    // precisely the symptom of the regression this exists to catch.
+    // The filter above is what makes the check meaningful, and also what could
+    // make it vacuous if it were ever decided from detect-on output. The floor is
+    // a second line of defence: an "I actually examined something" assertion, not
+    // a tolerance. It is deliberately far below the count that qualifies today, so
+    // it fires on the filter collapsing rather than on a dictionary edit.
     const int kMinChecked = 50;
     bool ok = (leaked == 0 && typed >= kMinChecked);
     printf("  [%s] C-order %d alternate Telex key orders stay Vietnamese%s\n",
            ok ? "PASS" : "FAIL", typed,
-           leaked ? (" (\"" + firstLeak + "\" came out raw)").c_str()
+           leaked ? (" (\"" + firstLeak + "\")").c_str()
                   : (typed < kMinChecked ? " — examined too few, the filter went vacuous" : ""));
     ok ? g_pass++ : g_fail++;
 }
