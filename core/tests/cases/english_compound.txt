@@ -90,3 +90,9 @@ imagegen laf gif => imagegen là gì
 #     leading w -> ư is never restored. Recorded so a future dictionary or
 #     splitter change shows up here instead of passing silently.
 webhooks ok => ưebhooks ok
+
+# --- KNOWN LIMITATION (pre-existing): a digit anywhere in the word turns English
+#     detection off entirely -- buildEngRawFromStates() bails on any non-letter
+#     key -- so neither a simple word nor a compound is restored. Baseline does
+#     the same with a simple word ("window1" -> "ưindow1").
+dashboard1 ok => dáhboard1 ok
