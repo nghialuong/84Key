@@ -327,6 +327,157 @@ static void runFixtures(vKeyHookState* st, const char* dir) {
            g_fixPass, g_fixFail);
 }
 
+// ---- Contract checks for the compound splitter -----------------------------
+//
+// Every Vietnamese Telex spelling that the splitter reads as an English compound
+// ("chinhs" = chi+nhs-style splits, 43 of the 29644 at the time of writing) must
+// still be typed as Vietnamese. This types each one for real and checks the text
+// on screen, so it exercises the whole guard chain — drop the isVietByTelex()
+// check in restoreEnglishAtBreak() and these come out as raw keystrokes and this
+// fails. Checking isVietByTelex(w) directly instead would be tautological: w was
+// read from the very file the dictionary was loaded from.
+//
+// It is also self-scaling: a bigger English dictionary means more spellings
+// qualify and more get typed, where a "no more than N overlaps" threshold would
+// need retuning on every dictionary change and would pass a real leak that kept
+// the count flat.
+static void checkCompoundNeverOverridesVietnamese(vKeyHookState* st) {
+    FILE* f = fopen("../data/viet_telex.dat", "rb");
+    if (!f) { printf("  [FAIL] C-prop  cannot open viet_telex.dat\n"); g_fail++; return; }
+    char line[128];
+    int typed = 0, leaked = 0;
+    string firstLeak;
+    while (fgets(line, sizeof line, f)) {
+        string w(line);
+        while (!w.empty() && (w.back() == '\n' || w.back() == '\r')) w.pop_back();
+        if (w.empty() || !isEnglishCompound(w)) continue;
+        // Ground truth: what Vietnamese typing alone produces. English detection
+        // must not change it. Taking the reference with detection OFF keeps the
+        // oracle independent of the code under test.
+        vAutoDetectEnglish = 0;
+        string want = toUtf8(typeFresh(st, w + " "));
+        vAutoDetectEnglish = 1;
+        if (want == w + " ") continue;   // no diacritic to lose; nothing to prove
+        typed++;
+        // A word break is what triggers the restore, so type one.
+        string got = toUtf8(typeFresh(st, w + " "));
+        if (got != want && leaked++ == 0)
+            firstLeak = w + " -> " + got;
+    }
+    fclose(f);
+    const int kMinChecked = 20;   // 43 qualify today; see the note in C-order
+    bool ok = (leaked == 0 && typed >= kMinChecked);
+    printf("  [%s] C-prop %d Telex spellings read as English compounds stay Vietnamese%s\n",
+           ok ? "PASS" : "FAIL", typed,
+           leaked ? (" (\"" + firstLeak + "\")").c_str()
+                  : (typed < kMinChecked ? " — examined too few, the filter went vacuous" : ""));
+    ok ? g_pass++ : g_fail++;
+}
+
+// The same guarantee for the key orders Telex allows but the dictionary does not
+// store: the tone key right after the vowel ("chiseem" for "chiếm") and the vowel
+// modifier at the end ("thuana" for "thuân"). These are invisible to
+// isVietByTelexPrefix(), so renderedIsViet() — which looks up the word the engine
+// produced rather than the keys typed — is the only thing keeping them Vietnamese.
+// Both regressions found while building this were of exactly this shape.
+static bool got_is_raw(const string& got, const string& v) { return got == v + " "; }
+
+static void checkAlternateKeyOrdersStayVietnamese(vKeyHookState* st) {
+    FILE* f = fopen("../data/viet_telex.dat", "rb");
+    if (!f) { printf("  [FAIL] C-order cannot open viet_telex.dat\n"); g_fail++; return; }
+    char line[128];
+    int typed = 0, leaked = 0;
+    string firstLeak;
+    while (fgets(line, sizeof line, f)) {
+        string w(line);
+        while (!w.empty() && (w.back() == '\n' || w.back() == '\r')) w.pop_back();
+        if (w.size() < 3) continue;
+
+        vector<string> variants;
+        // tone key (canonically last) moved to just after each earlier position
+        if (string("sfrxj").find(w.back()) != string::npos) {
+            string stem = w.substr(0, w.size() - 1);
+            char tone = w.back();
+            for (size_t k = 1; k <= stem.size(); k++)
+                variants.push_back(stem.substr(0, k) + tone + stem.substr(k));
+        }
+        // vowel modifier moved to the end of the word
+        for (size_t k = 0; k < w.size(); k++)
+            if (string("waeo").find(w[k]) != string::npos)
+                variants.push_back(w.substr(0, k) + w.substr(k + 1) + w[k]);
+
+        for (const string& v : variants) {
+            // Only orders that would otherwise be taken for English matter here.
+            // isEnglishWord(v) goes down the older simple-word path instead, where
+            // a genuine English word deliberately stays English ("chosen" must not
+            // become "chọen"); this branch left that rule untouched.
+            if (v == w || !isEnglishCompound(v) || isVietByTelex(v) || isEnglishWord(v)) continue;
+            // Which variants count as a real alternate spelling of `w`, and what
+            // each should produce, are both decided with English detection OFF.
+            // That oracle cannot move when the code under test changes — deciding
+            // it from the detect-on output instead makes the check unfalsifiable:
+            // a variant that leaks to raw keystrokes no longer matches `w`, so it
+            // filters itself out and the leak counter can never fire.
+            vAutoDetectEnglish = 0;
+            string want = toUtf8(typeFresh(st, v + " "));
+            bool sameWord = (want == toUtf8(typeFresh(st, w + " ")));
+            string plainMidWord = toUtf8(typeFresh(st, v));
+            vAutoDetectEnglish = 1;
+            if (!sameWord) continue;     // a different word, or not a word at all
+            // The compound rule only acts at the break, so hold it responsible for
+            // the break alone. A variant whose prefix is an English word in its own
+            // right ("chiefeng" starts "chief") is already suppressed mid-word by
+            // the older simple-word rule; that predates this branch and baseline
+            // does the same, so it is not what this check is about.
+            if (toUtf8(typeFresh(st, v)) != plainMidWord) continue;
+            typed++;
+            // The compound rule's failure mode is one specific thing: reverting the
+            // word to the raw keystrokes. Other differences from `want` belong to
+            // other rules that predate this branch — dropDoubledToneAtBreak() drops
+            // the mark of "sieuse" because its tone key was pressed twice, and
+            // baseline does the same. With the oracle taken detect-off, this
+            // condition is reachable: removing the guard makes these come out raw.
+            if (got_is_raw(toUtf8(typeFresh(st, v + " ")), v) && leaked++ == 0)
+                firstLeak = v + " (" + w + ")";
+        }
+    }
+    fclose(f);
+    // The filter above is what makes the check meaningful, and also what could
+    // make it vacuous if it were ever decided from detect-on output. The floor is
+    // a second line of defence: an "I actually examined something" assertion, not
+    // a tolerance. It is deliberately far below the count that qualifies today, so
+    // it fires on the filter collapsing rather than on a dictionary edit.
+    const int kMinChecked = 50;
+    bool ok = (leaked == 0 && typed >= kMinChecked);
+    printf("  [%s] C-order %d alternate Telex key orders stay Vietnamese%s\n",
+           ok ? "PASS" : "FAIL", typed,
+           leaked ? (" (\"" + firstLeak + "\")").c_str()
+                  : (typed < kMinChecked ? " — examined too few, the filter went vacuous" : ""));
+    ok ? g_pass++ : g_fail++;
+}
+
+// A compound with no transform key inside it ("imagegen") is now restore-eligible,
+// but nothing about it changed on screen — so the engine must emit ZERO events for
+// it. restoreEnglishAtBreak()'s `differs` check is what guarantees that; without it
+// every clean compound would fire a pointless backspace+retype burst at each word
+// break, and that burst is exactly what misbehaves in browsers and Spotlight.
+static void checkCleanCompoundEmitsNothing(vKeyHookState* st) {
+    vKeyInit();
+    const char* keys = "imagegen ";
+    int events = 0;
+    for (const char* p = keys; *p; p++) {
+        bool caps = false;
+        int kc = asciiToKey(*p, caps);
+        vKeyHandleEvent(vKeyEvent::Keyboard, vKeyEventState::KeyDown, (Uint16)kc, caps ? 1 : 0, false);
+        if (st->code != vDoNothing || st->backspaceCount != 0)
+            events++;
+    }
+    bool ok = (events == 0);
+    printf("  [%s] C-noop \"imagegen \" emits no backspace/rewrite (%d keystroke(s) did)\n",
+           ok ? "PASS" : "FAIL", events);
+    ok ? g_pass++ : g_fail++;
+}
+
 int main() {
     string eng, viet;
     { FILE* f = fopen("../data/english_words.dat", "rb"); if (f) { char b[65536]; size_t r; while ((r = fread(b,1,sizeof b,f))>0) eng.append(b,r); fclose(f);} }
@@ -414,6 +565,40 @@ int main() {
         {"E-is",   "is ",       "í "},        // single tone key still prefers VN
     };
     for (auto& c : english) run(st, c);
+
+    printf("\n== Compound English (dictionary holds simple words only) ==\n");
+    Case compound[] = {
+        {"C-dash", "dashboard ok", "dashboard ok"},   // dash + board
+        {"C-air",  "airdrop ok",   "airdrop ok"},     // air + drop; r ate a letter before
+        {"C-test", "testgen ok",   "testgen ok"},     // test + gen
+        {"C-conf", "confusing ok", "confusing ok"},   // conf + using
+        {"C-mark", "markdown ok",  "markdown ok"},
+        {"C-suf",  "dashboards ok", "dashboards ok"}, // plural form
+        // Vietnamese wins: these Telex spellings do split into English pieces,
+        // and the isVietByTelex() guard is the only thing keeping them Vietnamese.
+        {"C-vn1",  "chinhs ok",    "chính ok"},
+        {"C-vn2",  "choair ok",    "choải ok"},
+        // Telex accepts the tone and vowel-modifier keys in several orders, but
+        // the dictionary stores one canonical spelling per word, so these are
+        // invisible to isVietByTelexPrefix() and split into English pieces
+        // ("chiseem" -> "chi"+"seem", "thuana" -> "thu"+"ana"). renderedIsViet(),
+        // which looks up the word the engine actually produced, is what keeps
+        // them Vietnamese.
+        {"C-tone1", "chiseem ok",  "chiếm ok"},   // tone key right after the vowel
+        {"C-tone2", "chiseen ok",  "chiến ok"},
+        {"C-tone3", "chofan ok",   "choàn ok"},
+        {"C-mod1",  "thuana ok",   "thuân ok"},   // vowel modifier at the end
+        {"C-mod2",  "chorio ok",   "chổi ok"},
+        {"C-mod3",  "dieuse ok",   "diếu ok"},
+        // Neither dictionary: a drawn-out "quáaaa" must be left alone, not
+        // reverted to its raw keystrokes.
+        {"C-none", "quasaaa ok",   "quaaá ok"},
+    };
+    for (auto& c : compound) run(st, c);
+
+    checkCompoundNeverOverridesVietnamese(st);
+    checkAlternateKeyOrdersStayVietnamese(st);
+    checkCleanCompoundEmitsNothing(st);
     vAutoDetectEnglish = 0;
 
     // User-supplied articles / cases dropped into core/tests/cases/*.txt

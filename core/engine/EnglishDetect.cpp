@@ -91,3 +91,44 @@ bool isVietByTelex(const string& word) {
 bool isVietByTelexPrefix(const string& word) {
     return dictHasPrefix(_vietDict, word);
 }
+
+// Compound splitting. A piece shorter than this makes the split meaningless
+// (two-letter English fragments match a large part of the Vietnamese Telex
+// dictionary); more than 3 pieces buys no real word but widens the surface.
+static const size_t kMinPiece = 3;
+static const size_t kMaxParts = 3;
+static const size_t kMaxLen = 32;   // MAX_BUFF: the longest word the engine keeps
+
+// dp[pos][parts]: word[0..pos) is exactly `parts` complete English words.
+// O(n^2) over n <= 32, each cell a binary_search over the word list.
+static bool compoundSplit(const string& w) {
+    const size_t n = w.size();
+    if (n < kMinPiece * 2 || n > kMaxLen)
+        return false;
+
+    bool dp[kMaxLen + 1][kMaxParts + 1];
+    for (size_t p = 0; p <= n; p++)
+        for (size_t k = 0; k <= kMaxParts; k++)
+            dp[p][k] = false;
+    dp[0][0] = true;
+
+    for (size_t pos = 0; pos < n; pos++) {
+        for (size_t parts = 0; parts < kMaxParts; parts++) {
+            if (!dp[pos][parts])
+                continue;
+            for (size_t end = pos + kMinPiece; end <= n; end++) {
+                string piece = w.substr(pos, end - pos);
+                if (isEnglishWord(piece)) {
+                    if (end == n && parts + 1 >= 2)
+                        return true;    // 2..kMaxParts complete words
+                    dp[end][parts + 1] = true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool isEnglishCompound(const string& word) {
+    return compoundSplit(word);
+}

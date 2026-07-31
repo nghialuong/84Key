@@ -1367,6 +1367,7 @@ static bool buildEngRawFromStates() {
 //when a transform key would otherwise fire (see the gate below), so it stays off
 //the hot path for ordinary keys.
 static bool rawDdReorderIsViet();
+static bool renderedIsViet();
 static bool shouldTreatAsEnglish() {
     if (!engDetectEnabled() || !buildEngRawFromStates())
         return false;
@@ -1389,6 +1390,15 @@ static bool shouldTreatAsEnglish() {
     //if the keystrokes could still grow into a Vietnamese word.
     if (isEnglishPrefix(_engRawWord))
         return !isVietByTelex(_engRawWord) && !isVietByTelexPrefix(_engRawWord);
+
+    //A compound typed as one token ("dashboard", "imagegen") is deliberately NOT
+    //handled here. Mid-word the engine has not applied the pending transform yet,
+    //so the word on screen is still "diéu" rather than "diếu" and there is no way
+    //to tell a compound apart from a Vietnamese word one keystroke from being
+    //finished — treating "dieuse" as "die"+"use" swallows the ê of "diếu".
+    //restoreEnglishAtBreak() handles compounds instead: at the break the whole
+    //word is known, so the choice is made on evidence rather than on a guess. The
+    //cost is that a diacritic flashes mid-word before being reverted.
 
     return false;
 }
@@ -1416,7 +1426,9 @@ static bool isStandaloneToggle(const Uint16& data) {
 //"test" stays a distinct English token (the Vietnamese "tét" is typed "tets").
 //Only fires when a tone mark was actually applied (toneless English like
 //"google" is untouched).
-static bool rawToneReorderIsViet() {
+//Rebuild the canonical tone-last spelling into `out`. False if no mark was
+//applied, or the tone key is missing/already last (nothing to reorder).
+static bool rawToneReorderCanonical(string& out) {
     Uint32 markMask = 0;
     for (i = 0; i < _index; i++) {
         if (TypingWord[i] & MARK_MASK) { markMask = TypingWord[i] & MARK_MASK; break; }
@@ -1429,12 +1441,73 @@ static bool rawToneReorderIsViet() {
     char toneChar = toneKey ? engKeyToChar(toneKey) : 0;
     if (!toneChar)
         return false;
-    string w = _engRawWord;
-    size_t pos = w.rfind(toneChar);
-    if (pos == string::npos || pos == w.size() - 1) //missing, or already tone-last
+    out = _engRawWord;
+    size_t pos = out.rfind(toneChar);
+    if (pos == string::npos || pos == out.size() - 1) //missing, or already tone-last
         return false;
-    w.erase(pos, 1);
-    w.push_back(toneChar);
+    out.erase(pos, 1);
+    out.push_back(toneChar);
+    return true;
+}
+
+//Telex accepts the tone and vowel-modifier keys in many orders, but the
+//dictionary stores exactly one canonical spelling per word: doubled vowel for
+//the circumflex, "w" after the vowel for the horn/breve, "dd" for đ, tone key
+//last. "chiếm" can be typed "chieems" (canonical), "chiseem" (tone-first) or
+//"chieesm"; "thuân" can be typed "thuaan" or "thuana". Only the first of each
+//is in the dictionary, so checking the raw keystrokes misses the rest.
+//
+//So check what the engine actually PRODUCED instead: rebuild the canonical
+//spelling of the on-screen word from TypingWord[] and look that up. Whatever
+//order the user typed in, a real Vietnamese word lands on the same canonical
+//spelling. Returns false if the word holds a key that has no letter.
+static bool renderedVietTelex(string& out) {
+    if (_index <= 0 || _index > MAX_BUFF)
+        return false;
+    out.clear();
+    char toneChar = 0;
+    for (i = 0; i < _index; i++) {
+        char c = engKeyToChar(CHR(i));
+        if (c == 0)
+            return false;
+        if ((TypingWord[i] & TONE_MASK) && c == 'd')
+            out.push_back('d');         // đ -> "dd"
+        out.push_back(c);
+        if ((TypingWord[i] & TONE_MASK) && c != 'd')
+            out.push_back(c);           // â/ê/ô -> doubled vowel
+        if (TypingWord[i] & TONEW_MASK)
+            out.push_back('w');         // ư/ơ/ă -> vowel + w
+        if (!toneChar) {
+            Uint32 mark = TypingWord[i] & MARK_MASK;
+            toneChar = mark == MARK1_MASK ? 's' : mark == MARK2_MASK ? 'f' :
+                       mark == MARK3_MASK ? 'r' : mark == MARK4_MASK ? 'x' :
+                       mark == MARK5_MASK ? 'j' : 0;
+        }
+    }
+    if (toneChar)
+        out.push_back(toneChar);
+    return true;
+}
+
+//The word on screen is Vietnamese, whatever key order produced it. Only the
+//compound branches use this: a compound is recognised entirely outside both
+//dictionaries, so a non-canonical spelling is invisible to isVietByTelexPrefix()
+//and would be split into English pieces ("chiseem" -> "chi"+"seem", "thuana" ->
+//"thu"+"ana"). The narrower rule below cannot cover them: it needs the canonical
+//form to ALSO be an English word, which "chieems" is not.
+static bool renderedIsViet() {
+    string w;
+    if (!renderedVietTelex(w))
+        return false;
+    if (isVietByTelex(w) || isVietByTelexPrefix(w))
+        return true;
+    return rawToneReorderCanonical(w) && (isVietByTelex(w) || isVietByTelexPrefix(w));
+}
+
+static bool rawToneReorderIsViet() {
+    string w;
+    if (!rawToneReorderCanonical(w))
+        return false;
     return isEnglishWord(w) && (isVietByTelex(w) || isVietByTelexPrefix(w));
 }
 
@@ -1466,8 +1539,15 @@ static bool restoreEnglishAtBreak(const int& handleCode) {
     //valid Vietnamese prefix (e.g. "dd" -> đ): otherwise a complete-English-word
     //digraph like "dd" would be reverted at the break, undoing the diacritic.
     //rawToneReorderIsViet() covers tone-first spellings ("ist" of "ít").
-    if (!isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord)
-        || rawToneReorderIsViet() || rawDdReorderIsViet())
+    //A compound counts as English evidence too ("dashboard" = dash+board), so a
+    //diacritic applied inside one is reverted at the break like a simple word.
+    //Compound evidence carries the stricter tone-reorder guard with it: only a
+    //real dictionary word may fall back to the narrow rawToneReorderIsViet().
+    bool isSimpleEnglish = isEnglishWord(_engRawWord);
+    if ((!isSimpleEnglish && !isEnglishCompound(_engRawWord))
+        || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord)
+        || (isSimpleEnglish ? rawToneReorderIsViet() : renderedIsViet())
+        || rawDdReorderIsViet())
         return false;
 
     //Only act if the current on-screen word actually differs from the raw keys.
