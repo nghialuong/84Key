@@ -41,3 +41,6 @@ core/tests/cases/test_1.txt
 # --- Misc ---
 *.log
 .env
+
+# AI debate transcripts (local only)
+debates/
