@@ -1367,7 +1367,7 @@ static bool buildEngRawFromStates() {
 //when a transform key would otherwise fire (see the gate below), so it stays off
 //the hot path for ordinary keys.
 static bool rawDdReorderIsViet();
-static bool rawToneReorderIsVietOnly();
+static bool renderedIsViet();
 static bool shouldTreatAsEnglish() {
     if (!engDetectEnabled() || !buildEngRawFromStates())
         return false;
@@ -1391,24 +1391,14 @@ static bool shouldTreatAsEnglish() {
     if (isEnglishPrefix(_engRawWord))
         return !isVietByTelex(_engRawWord) && !isVietByTelexPrefix(_engRawWord);
 
-    //Compound typed as one token ("dashboard", "imagegen"): the dictionary only
-    //holds simple words, so past the first piece the keystrokes stop looking
-    //English and the transform keys inside start eating letters. Recognise the
-    //split instead. The two forms cover the two moments a transform key can
-    //fire inside a compound: mid-piece ("dashboar" + 'r' -> dash+boar) and on a
-    //suffix ("webhooks" + 's', where everything before the key is a compound).
-    //Stricter than the branches above: compound leaves the dictionaries behind,
-    //so rawToneReorderIsVietOnly() is needed here to still favour a Vietnamese
-    //word typed tone-first ("chiseem" = chiếm), which isVietByTelexPrefix alone
-    //would not catch.
-    if (!isVietByTelex(_engRawWord) && !isVietByTelexPrefix(_engRawWord)
-        && !rawToneReorderIsVietOnly()) {
-        if (isEnglishCompoundPrefix(_engRawWord))
-            return true;
-        if (_engRawWord.size() >= 7 &&
-            isEnglishCompound(_engRawWord.substr(0, _engRawWord.size() - 1)))
-            return true;
-    }
+    //A compound typed as one token ("dashboard", "imagegen") is deliberately NOT
+    //handled here. Mid-word the engine has not applied the pending transform yet,
+    //so the word on screen is still "diéu" rather than "diếu" and there is no way
+    //to tell a compound apart from a Vietnamese word one keystroke from being
+    //finished — treating "dieuse" as "die"+"use" swallows the ê of "diếu".
+    //restoreEnglishAtBreak() handles compounds instead: at the break the whole
+    //word is known, so the choice is made on evidence rather than on a guess. The
+    //cost is that a diacritic flashes mid-word before being reverted.
 
     return false;
 }
@@ -1460,14 +1450,57 @@ static bool rawToneReorderCanonical(string& out) {
     return true;
 }
 
-//The canonical spelling is Vietnamese, full stop — no English condition. Only
-//the compound branches use this: a compound is recognised entirely outside both
-//dictionaries, so a tone-first spelling that isn't in the Vietnamese dictionary
-//("chiseem" for "chiếm") is invisible to isVietByTelexPrefix() and would be
-//split into English pieces ("chi"+"seem"). The narrower rule below cannot cover
-//it: it needs the canonical to ALSO be an English word, which "chieems" is not.
-static bool rawToneReorderIsVietOnly() {
+//Telex accepts the tone and vowel-modifier keys in many orders, but the
+//dictionary stores exactly one canonical spelling per word: doubled vowel for
+//the circumflex, "w" after the vowel for the horn/breve, "dd" for đ, tone key
+//last. "chiếm" can be typed "chieems" (canonical), "chiseem" (tone-first) or
+//"chieesm"; "thuân" can be typed "thuaan" or "thuana". Only the first of each
+//is in the dictionary, so checking the raw keystrokes misses the rest.
+//
+//So check what the engine actually PRODUCED instead: rebuild the canonical
+//spelling of the on-screen word from TypingWord[] and look that up. Whatever
+//order the user typed in, a real Vietnamese word lands on the same canonical
+//spelling. Returns false if the word holds a key that has no letter.
+static bool renderedVietTelex(string& out) {
+    if (_index <= 0 || _index > MAX_BUFF)
+        return false;
+    out.clear();
+    char toneChar = 0;
+    for (i = 0; i < _index; i++) {
+        char c = engKeyToChar(CHR(i));
+        if (c == 0)
+            return false;
+        if ((TypingWord[i] & TONE_MASK) && c == 'd')
+            out.push_back('d');         // đ -> "dd"
+        out.push_back(c);
+        if ((TypingWord[i] & TONE_MASK) && c != 'd')
+            out.push_back(c);           // â/ê/ô -> doubled vowel
+        if (TypingWord[i] & TONEW_MASK)
+            out.push_back('w');         // ư/ơ/ă -> vowel + w
+        if (!toneChar) {
+            Uint32 mark = TypingWord[i] & MARK_MASK;
+            toneChar = mark == MARK1_MASK ? 's' : mark == MARK2_MASK ? 'f' :
+                       mark == MARK3_MASK ? 'r' : mark == MARK4_MASK ? 'x' :
+                       mark == MARK5_MASK ? 'j' : 0;
+        }
+    }
+    if (toneChar)
+        out.push_back(toneChar);
+    return true;
+}
+
+//The word on screen is Vietnamese, whatever key order produced it. Only the
+//compound branches use this: a compound is recognised entirely outside both
+//dictionaries, so a non-canonical spelling is invisible to isVietByTelexPrefix()
+//and would be split into English pieces ("chiseem" -> "chi"+"seem", "thuana" ->
+//"thu"+"ana"). The narrower rule below cannot cover them: it needs the canonical
+//form to ALSO be an English word, which "chieems" is not.
+static bool renderedIsViet() {
     string w;
+    if (!renderedVietTelex(w))
+        return false;
+    if (isVietByTelex(w) || isVietByTelexPrefix(w))
+        return true;
     return rawToneReorderCanonical(w) && (isVietByTelex(w) || isVietByTelexPrefix(w));
 }
 
@@ -1513,7 +1546,7 @@ static bool restoreEnglishAtBreak(const int& handleCode) {
     bool isSimpleEnglish = isEnglishWord(_engRawWord);
     if ((!isSimpleEnglish && !isEnglishCompound(_engRawWord))
         || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord)
-        || (isSimpleEnglish ? rawToneReorderIsViet() : rawToneReorderIsVietOnly())
+        || (isSimpleEnglish ? rawToneReorderIsViet() : renderedIsViet())
         || rawDdReorderIsViet())
         return false;
 

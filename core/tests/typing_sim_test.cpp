@@ -347,7 +347,7 @@ static void checkCompoundNeverOverridesVietnamese() {
         while (!w.empty() && (w.back() == '\n' || w.back() == '\r')) w.pop_back();
         if (w.empty()) continue;
         checked++;
-        if (!isEnglishCompound(w) && !isEnglishCompoundPrefix(w)) continue;
+        if (!isEnglishCompound(w)) continue;
         if (isVietByTelex(w) || isVietByTelexPrefix(w)) continue;
         if (leaked++ == 0) firstLeak = w;
     }
@@ -476,18 +476,23 @@ int main() {
         {"C-test", "testgen ok",   "testgen ok"},     // test + gen
         {"C-conf", "confusing ok", "confusing ok"},   // conf + using
         {"C-mark", "markdown ok",  "markdown ok"},
-        {"C-suf",  "dashboards ok", "dashboards ok"}, // key fires after a full compound
+        {"C-suf",  "dashboards ok", "dashboards ok"}, // plural form
         // Vietnamese wins: these Telex spellings do split into English pieces,
         // and the isVietByTelex() guard is the only thing keeping them Vietnamese.
         {"C-vn1",  "chinhs ok",    "chính ok"},
         {"C-vn2",  "choair ok",    "choải ok"},
-        // Tone key placed right after the vowel instead of at the end. Only the
-        // canonical spelling ("chieems") is in the dictionary, so these are
+        // Telex accepts the tone and vowel-modifier keys in several orders, but
+        // the dictionary stores one canonical spelling per word, so these are
         // invisible to isVietByTelexPrefix() and split into English pieces
-        // ("chi"+"seem"). rawToneReorderIsVietOnly() is what keeps them Vietnamese.
-        {"C-tone1", "chiseem ok",  "chiếm ok"},
+        // ("chiseem" -> "chi"+"seem", "thuana" -> "thu"+"ana"). renderedIsViet(),
+        // which looks up the word the engine actually produced, is what keeps
+        // them Vietnamese.
+        {"C-tone1", "chiseem ok",  "chiếm ok"},   // tone key right after the vowel
         {"C-tone2", "chiseen ok",  "chiến ok"},
         {"C-tone3", "chofan ok",   "choàn ok"},
+        {"C-mod1",  "thuana ok",   "thuân ok"},   // vowel modifier at the end
+        {"C-mod2",  "chorio ok",   "chổi ok"},
+        {"C-mod3",  "dieuse ok",   "diếu ok"},
         // Neither dictionary: a drawn-out "quáaaa" must be left alone, not
         // reverted to its raw keystrokes.
         {"C-none", "quasaaa ok",   "quaaá ok"},

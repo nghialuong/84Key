@@ -27,8 +27,7 @@ username ok => username ok
 filename ok => filename ok
 keyboard ok => keyboard ok
 
-# --- plural/suffix: the transform key fires when everything before it is
-#     already a complete compound ---
+# --- plural/suffix forms ---
 dashboards ok => dashboards ok
 filenames ok => filenames ok
 
@@ -56,6 +55,8 @@ hocj ok => học ok
 #     ("chi"+"seem") — it must still come out Vietnamese. Found by review; the
 #     narrow rawToneReorderIsViet() does not cover these because it also
 #     requires the canonical form to be an English word, which "chieems" is not.
+#     renderedIsViet() looks up the word the engine actually produced instead, so
+#     every key order that lands on a Vietnamese word is covered.
 chiseem ok => chiếm ok
 chiseen ok => chiến ok
 chofan ok => choàn ok
@@ -63,6 +64,11 @@ chojam ok => choạm ok
 choram ok => choảm ok
 buswow ok => bướ ok
 chiseem lasy ok => chiếm láy ok
+thuana ok => thuân ok
+chorio ok => chổi ok
+dieuse ok => diếu ok
+sieuse ok => siêu ok
+duoiso ok => duối ok
 
 # --- a string in neither dictionary is left alone: the drawn-out "quáaaa" must
 #     not be reverted to raw keystrokes. This is the counter-example to the

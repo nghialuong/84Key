@@ -70,12 +70,4 @@ bool isVietByTelexPrefix(const std::string& word);
  */
 bool isEnglishCompound(const std::string& word);
 
-/**
- * As isEnglishCompound(), but the LAST piece only has to be an English prefix
- * (still at least 3 letters), so a compound is recognised while it is still
- * being typed ("dashboar" = "dash" + start of "board"). At least one complete
- * English word must precede that prefix.
- */
-bool isEnglishCompoundPrefix(const std::string& word);
-
 #endif /* EnglishDetect_h */

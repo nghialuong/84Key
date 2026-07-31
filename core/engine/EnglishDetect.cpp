@@ -101,7 +101,7 @@ static const size_t kMaxLen = 32;   // MAX_BUFF: the longest word the engine kee
 
 // dp[pos][parts]: word[0..pos) is exactly `parts` complete English words.
 // O(n^2) over n <= 32, each cell a binary_search over the word list.
-static bool compoundSplit(const string& w, const bool& allowLastPrefix) {
+static bool compoundSplit(const string& w) {
     const size_t n = w.size();
     if (n < kMinPiece * 2 || n > kMaxLen)
         return false;
@@ -123,10 +123,6 @@ static bool compoundSplit(const string& w, const bool& allowLastPrefix) {
                         return true;    // 2..kMaxParts complete words
                     dp[end][parts + 1] = true;
                 }
-                //the trailing piece may still be unfinished, but only after at
-                //least one complete word has been matched
-                if (allowLastPrefix && end == n && parts >= 1 && isEnglishPrefix(piece))
-                    return true;
             }
         }
     }
@@ -134,9 +130,5 @@ static bool compoundSplit(const string& w, const bool& allowLastPrefix) {
 }
 
 bool isEnglishCompound(const string& word) {
-    return compoundSplit(word, false);
-}
-
-bool isEnglishCompoundPrefix(const string& word) {
-    return compoundSplit(word, true);
+    return compoundSplit(word);
 }
