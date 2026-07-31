@@ -329,33 +329,96 @@ static void runFixtures(vKeyHookState* st, const char* dir) {
 
 // ---- Contract checks for the compound splitter -----------------------------
 //
-// Property: recognising compounds must never be what decides a Vietnamese word.
-// A 3-letter piece floor keeps the overlap tiny (43 of 29644 Telex spellings at
-// the time of writing), but "tiny" is not the guarantee — the guarantee is that
-// every overlapping spelling is itself in the Vietnamese dictionary, so
-// shouldTreatAsEnglish()/restoreEnglishAtBreak() bail on it via isVietByTelex().
-// Counting instead would need the threshold retuned whenever a dictionary grows;
-// this holds regardless of size. Fails the gate if a dictionary change breaks it.
-static void checkCompoundNeverOverridesVietnamese() {
+// Every Vietnamese Telex spelling that the splitter reads as an English compound
+// ("chinhs" = chi+nhs-style splits, 43 of the 29644 at the time of writing) must
+// still be typed as Vietnamese. This types each one for real and checks the text
+// on screen, so it exercises the whole guard chain — drop the isVietByTelex()
+// check in restoreEnglishAtBreak() and these come out as raw keystrokes and this
+// fails. Checking isVietByTelex(w) directly instead would be tautological: w was
+// read from the very file the dictionary was loaded from.
+//
+// It is also self-scaling: a bigger English dictionary means more spellings
+// qualify and more get typed, where a "no more than N overlaps" threshold would
+// need retuning on every dictionary change and would pass a real leak that kept
+// the count flat.
+static void checkCompoundNeverOverridesVietnamese(vKeyHookState* st) {
     FILE* f = fopen("../data/viet_telex.dat", "rb");
     if (!f) { printf("  [FAIL] C-prop  cannot open viet_telex.dat\n"); g_fail++; return; }
     char line[128];
-    int checked = 0, leaked = 0;
+    int typed = 0, leaked = 0;
     string firstLeak;
     while (fgets(line, sizeof line, f)) {
         string w(line);
         while (!w.empty() && (w.back() == '\n' || w.back() == '\r')) w.pop_back();
-        if (w.empty()) continue;
-        checked++;
-        if (!isEnglishCompound(w)) continue;
-        if (isVietByTelex(w) || isVietByTelexPrefix(w)) continue;
-        if (leaked++ == 0) firstLeak = w;
+        if (w.empty() || !isEnglishCompound(w)) continue;
+        typed++;
+        // A word break is what triggers the restore, so type one.
+        string got = toUtf8(typeFresh(st, w + " "));
+        if (got == w + " " && leaked++ == 0)   // reverted to the raw keystrokes
+            firstLeak = w;
     }
     fclose(f);
     bool ok = (leaked == 0);
-    printf("  [%s] C-prop %d Telex spellings: none read as English-only%s\n",
-           ok ? "PASS" : "FAIL", checked,
-           ok ? "" : (" (e.g. \"" + firstLeak + "\")").c_str());
+    printf("  [%s] C-prop %d Telex spellings read as English compounds stay Vietnamese%s\n",
+           ok ? "PASS" : "FAIL", typed,
+           ok ? "" : (" (\"" + firstLeak + "\" came out raw)").c_str());
+    ok ? g_pass++ : g_fail++;
+}
+
+// The same guarantee for the key orders Telex allows but the dictionary does not
+// store: the tone key right after the vowel ("chiseem" for "chiếm") and the vowel
+// modifier at the end ("thuana" for "thuân"). These are invisible to
+// isVietByTelexPrefix(), so renderedIsViet() — which looks up the word the engine
+// produced rather than the keys typed — is the only thing keeping them Vietnamese.
+// Both regressions found while building this were of exactly this shape.
+static void checkAlternateKeyOrdersStayVietnamese(vKeyHookState* st) {
+    FILE* f = fopen("../data/viet_telex.dat", "rb");
+    if (!f) { printf("  [FAIL] C-order cannot open viet_telex.dat\n"); g_fail++; return; }
+    char line[128];
+    int typed = 0, leaked = 0;
+    string firstLeak;
+    while (fgets(line, sizeof line, f)) {
+        string w(line);
+        while (!w.empty() && (w.back() == '\n' || w.back() == '\r')) w.pop_back();
+        if (w.size() < 3) continue;
+
+        vector<string> variants;
+        // tone key (canonically last) moved to just after each earlier position
+        if (string("sfrxj").find(w.back()) != string::npos) {
+            string stem = w.substr(0, w.size() - 1);
+            char tone = w.back();
+            for (size_t k = 1; k <= stem.size(); k++)
+                variants.push_back(stem.substr(0, k) + tone + stem.substr(k));
+        }
+        // vowel modifier moved to the end of the word
+        for (size_t k = 0; k < w.size(); k++)
+            if (string("waeo").find(w[k]) != string::npos)
+                variants.push_back(w.substr(0, k) + w.substr(k + 1) + w[k]);
+
+        for (const string& v : variants) {
+            // Only orders that would otherwise be taken for English matter here,
+            // and only those the engine still renders as this very word.
+            if (v == w || !isEnglishCompound(v) || isVietByTelex(v)) continue;
+            string got = toUtf8(typeFresh(st, v + " "));
+            if (got != toUtf8(typeFresh(st, w + " "))) continue;  // renders to something else
+            typed++;
+            if (got == v + " " && leaked++ == 0)
+                firstLeak = v + " (" + w + ")";
+        }
+    }
+    fclose(f);
+    // The "renders to this same word" filter above is what makes the check
+    // meaningful, and also what could make it vacuous: break the guard and every
+    // variant renders to something else, so nothing is examined and the check
+    // passes having tested nothing. The floor is an "I actually checked something"
+    // assertion, not a tolerance — 113 orders qualify today, and a drop to zero is
+    // precisely the symptom of the regression this exists to catch.
+    const int kMinChecked = 50;
+    bool ok = (leaked == 0 && typed >= kMinChecked);
+    printf("  [%s] C-order %d alternate Telex key orders stay Vietnamese%s\n",
+           ok ? "PASS" : "FAIL", typed,
+           leaked ? (" (\"" + firstLeak + "\" came out raw)").c_str()
+                  : (typed < kMinChecked ? " — examined too few, the filter went vacuous" : ""));
     ok ? g_pass++ : g_fail++;
 }
 
@@ -499,7 +562,8 @@ int main() {
     };
     for (auto& c : compound) run(st, c);
 
-    checkCompoundNeverOverridesVietnamese();
+    checkCompoundNeverOverridesVietnamese(st);
+    checkAlternateKeyOrdersStayVietnamese(st);
     checkCleanCompoundEmitsNothing(st);
     vAutoDetectEnglish = 0;
 
