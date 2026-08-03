@@ -27,18 +27,12 @@ jobs:
       # literals by codepage unless told otherwise (core/CMakeLists.txt passes
       # /utf-8). Running the same 214-case oracle here is what makes the
       # Windows port's engine layer trustworthy rather than merely compiling.
+      # KEY84_REQUIRE_MSVC makes configuration fail outright if the toolchain
+      # resolved to anything but MSVC. Without it this job could go green on a
+      # fallback compiler while testing nothing the Linux job does not already
+      # cover — the exact failure mode the whole task exists to rule out.
       - name: Configure (MSVC, x64)
-        run: cmake -S core -B build/core -A x64
-      # Guard against the job going green on a toolchain that isn't MSVC — the
-      # point of this job is the MSVC path specifically, and a silent fallback
-      # to another compiler would leave it passing while testing nothing new.
-      - name: Assert the compiler really is MSVC
-        shell: bash
-        run: |
-          set -euo pipefail
-          id=$(grep -m1 '^CMAKE_CXX_COMPILER_ID:' build/core/CMakeCache.txt | cut -d= -f2)
-          echo "CXX compiler id: $id"
-          [ "$id" = "MSVC" ] || { echo "ERROR: expected MSVC, got '$id'" >&2; exit 1; }
+        run: cmake -S core -B build/core -A x64 -DKEY84_REQUIRE_MSVC=ON
       - name: Build
         run: cmake --build build/core --config Release
       - name: Run the engine + English-detection harness

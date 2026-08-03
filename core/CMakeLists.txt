@@ -28,6 +28,17 @@ if(NOT KEY84_ENGINE_SOURCES)
     message(FATAL_ERROR "No engine sources found in core/engine — wrong source dir?")
 endif()
 
+# The Windows CI job exists to prove the engine builds and passes under MSVC
+# specifically; if the toolchain silently resolved to anything else the job
+# would stay green while testing nothing the Linux job does not already cover.
+# Off by default so this same file still configures with clang/gcc locally.
+option(KEY84_REQUIRE_MSVC "Fail configuration unless the compiler is MSVC" OFF)
+if(KEY84_REQUIRE_MSVC AND NOT MSVC)
+    message(FATAL_ERROR
+            "KEY84_REQUIRE_MSVC is ON but the C++ compiler is "
+            "'${CMAKE_CXX_COMPILER_ID}', not MSVC.")
+endif()
+
 add_library(key84_engine STATIC ${KEY84_ENGINE_SOURCES})
 target_include_directories(key84_engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/engine")
 
