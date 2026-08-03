@@ -18,7 +18,12 @@
 #include <cstdint>
 #include <vector>
 #include <algorithm>
-#include <dirent.h>
+// <dirent.h> would be the shorter spelling, but MSVC ships no such header, and
+// W0 of the Windows port exists precisely to compile this harness with MSVC.
+// <filesystem> is why this one file is built as C++17 while the engine library
+// it links against stays C++14 — see core/CMakeLists.txt.
+#include <filesystem>
+#include <system_error>
 #include <map>
 
 #include "../engine/Engine.h"
@@ -309,15 +314,17 @@ static void runFixtureFile(vKeyHookState* st, const string& path, const string& 
 }
 
 static void runFixtures(vKeyHookState* st, const char* dir) {
-    DIR* d = opendir(dir);
-    if (!d) return;
     vector<string> files;
-    struct dirent* e;
-    while ((e = readdir(d)) != NULL) {
-        string n = e->d_name;
-        if (n.size() > 4 && n.compare(n.size() - 4, 4, ".txt") == 0) files.push_back(n);
+    {
+        std::error_code ec;
+        std::filesystem::directory_iterator it(dir, ec), end;
+        if (ec) return;
+        for (; it != end; it.increment(ec)) {
+            if (ec) return;
+            string n = it->path().filename().string();
+            if (n.size() > 4 && n.compare(n.size() - 4, 4, ".txt") == 0) files.push_back(n);
+        }
     }
-    closedir(d);
     if (files.empty()) return;
     sort(files.begin(), files.end());
     printf("\n== Article fixtures (%s/*.txt) ==\n", dir);
@@ -482,6 +489,18 @@ int main() {
     string eng, viet;
     { FILE* f = fopen("../data/english_words.dat", "rb"); if (f) { char b[65536]; size_t r; while ((r = fread(b,1,sizeof b,f))>0) eng.append(b,r); fclose(f);} }
     { FILE* f = fopen("../data/viet_telex.dat", "rb"); if (f) { char b[65536]; size_t r; while ((r = fread(b,1,sizeof b,f))>0) viet.append(b,r); fclose(f);} }
+    // Both loads above swallow a missing/unreadable file, and an empty English
+    // dictionary disables auto-detection rather than erroring. Measured: run
+    // from the wrong working directory this harness used to report "48 passed,
+    // 17 failed" — it did fail, but as 17 scattered assertion failures with 48
+    // passes that only held because detection was off. That sends whoever hits
+    // it (most likely on Windows, where CWD is set by CTest rather than by
+    // run_tests.sh) hunting engine bugs. One diagnostic beats seventeen.
+    if (eng.empty() || viet.empty()) {
+        printf("FAIL: dictionaries missing or unreadable from CWD "
+               "(expected ../data/*.dat relative to core/tests)\n");
+        return 2;
+    }
     initEnglishDict((const Byte*)eng.data(), (int)eng.size());
     initVietByTelexDict((const Byte*)viet.data(), (int)viet.size());
     vKeyHookState* st = (vKeyHookState*)vKeyInit();

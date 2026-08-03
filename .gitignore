@@ -25,6 +25,15 @@ xcuserdata/
 *.hmap
 *.ipa
 
+# --- C/C++ build artifacts ---
+# run_tests.sh and CMake both build outside the source tree, but a hand-run
+# `c++ -c` in core/tests drops objects next to the sources, where `git add -A`
+# will happily pick them up.
+*.o
+*.obj
+*.a
+*.lib
+
 # --- Swift Package Manager ---
 .build/
 .swiftpm/

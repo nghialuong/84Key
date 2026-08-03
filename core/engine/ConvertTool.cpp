@@ -12,6 +12,7 @@
 #include <iostream>
 #include <memory.h>
 #include <algorithm> // std::find — explicit for libstdc++ (not transitively included)
+#include <cwctype>   // towupper/towlower — libc++ pulls these in via <locale>, MSVC does not
 
 //option
 bool convertToolDontAlertWhenCompleted = false;
