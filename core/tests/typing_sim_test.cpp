@@ -18,7 +18,12 @@
 #include <cstdint>
 #include <vector>
 #include <algorithm>
-#include <dirent.h>
+// <dirent.h> would be the shorter spelling, but MSVC ships no such header, and
+// W0 of the Windows port exists precisely to compile this harness with MSVC.
+// <filesystem> is why this one file is built as C++17 while the engine library
+// it links against stays C++14 — see core/CMakeLists.txt.
+#include <filesystem>
+#include <system_error>
 #include <map>
 
 #include "../engine/Engine.h"
@@ -309,15 +314,17 @@ static void runFixtureFile(vKeyHookState* st, const string& path, const string& 
 }
 
 static void runFixtures(vKeyHookState* st, const char* dir) {
-    DIR* d = opendir(dir);
-    if (!d) return;
     vector<string> files;
-    struct dirent* e;
-    while ((e = readdir(d)) != NULL) {
-        string n = e->d_name;
-        if (n.size() > 4 && n.compare(n.size() - 4, 4, ".txt") == 0) files.push_back(n);
+    {
+        std::error_code ec;
+        std::filesystem::directory_iterator it(dir, ec), end;
+        if (ec) return;
+        for (; it != end; it.increment(ec)) {
+            if (ec) return;
+            string n = it->path().filename().string();
+            if (n.size() > 4 && n.compare(n.size() - 4, 4, ".txt") == 0) files.push_back(n);
+        }
     }
-    closedir(d);
     if (files.empty()) return;
     sort(files.begin(), files.end());
     printf("\n== Article fixtures (%s/*.txt) ==\n", dir);

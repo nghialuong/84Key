@@ -69,3 +69,12 @@ foreach(harness engine_test typing_sim_test)
     add_test(NAME ${harness} COMMAND ${harness})
     set_tests_properties(${harness} PROPERTIES WORKING_DIRECTORY "${KEY84_TESTS_DIR}")
 endforeach()
+
+# typing_sim_test enumerates core/tests/cases/*.txt. That used to be <dirent.h>,
+# which MSVC does not ship, so it is std::filesystem now — hence C++17 for this
+# one target. The engine library deliberately stays at C++14: raising it to 17
+# turns the std::wstring_convert/<codecvt> pair in Engine.cpp into deprecation
+# warnings (measured: 2 under clang -Wall), and a build that must be read past
+# warnings is how a real one gets missed. Replacing <codecvt> is its own change,
+# not a side effect of making the test suite build on Windows.
+set_target_properties(typing_sim_test PROPERTIES CXX_STANDARD 17)
