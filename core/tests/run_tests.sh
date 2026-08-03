@@ -13,8 +13,11 @@ if [ ! -e "${ENGINE_SRC[0]}" ]; then
     exit 1
 fi
 
-BUILD="${TMPDIR:-/tmp}/key84_tests_build"
-rm -rf "$BUILD" && mkdir -p "$BUILD"
+# A per-run directory, not a fixed path: two concurrent runs (a local shell and
+# a CI step, or two terminals) sharing one would delete each other's objects
+# mid-build and fail for reasons that look nothing like the cause.
+BUILD="$(mktemp -d "${TMPDIR:-/tmp}/key84_tests_build.XXXXXX")"
+trap 'rm -rf "$BUILD"' EXIT
 
 # The engine compiles to objects once, at C++14, and both harnesses link against
 # them. Compiling the engine into each harness instead would be fine until
