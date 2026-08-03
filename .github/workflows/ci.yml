@@ -16,6 +16,34 @@ jobs:
       - name: Build and run the engine + English-detection harness
         run: bash core/tests/run_tests.sh
 
+  engine-tests-windows:
+    name: Core engine tests (MSVC)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The engine has only ever been compiled by clang/gcc, where wchar_t is
+      # 32-bit and <cwctype>/<algorithm> arrive transitively through libc++.
+      # MSVC differs on both counts and decodes the suite's UTF-8 Vietnamese
+      # literals by codepage unless told otherwise (core/CMakeLists.txt passes
+      # /utf-8). Running the same 214-case oracle here is what makes the
+      # Windows port's engine layer trustworthy rather than merely compiling.
+      - name: Configure (MSVC, x64)
+        run: cmake -S core -B build/core -A x64
+      # Guard against the job going green on a toolchain that isn't MSVC — the
+      # point of this job is the MSVC path specifically, and a silent fallback
+      # to another compiler would leave it passing while testing nothing new.
+      - name: Assert the compiler really is MSVC
+        shell: bash
+        run: |
+          set -euo pipefail
+          id=$(grep -m1 '^CMAKE_CXX_COMPILER_ID:' build/core/CMakeCache.txt | cut -d= -f2)
+          echo "CXX compiler id: $id"
+          [ "$id" = "MSVC" ] || { echo "ERROR: expected MSVC, got '$id'" >&2; exit 1; }
+      - name: Build
+        run: cmake --build build/core --config Release
+      - name: Run the engine + English-detection harness
+        run: ctest --test-dir build/core -C Release --output-on-failure
+
   macos-app:
     name: Build macOS app
     runs-on: macos-latest
