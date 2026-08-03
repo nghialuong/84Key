@@ -482,6 +482,18 @@ int main() {
     string eng, viet;
     { FILE* f = fopen("../data/english_words.dat", "rb"); if (f) { char b[65536]; size_t r; while ((r = fread(b,1,sizeof b,f))>0) eng.append(b,r); fclose(f);} }
     { FILE* f = fopen("../data/viet_telex.dat", "rb"); if (f) { char b[65536]; size_t r; while ((r = fread(b,1,sizeof b,f))>0) viet.append(b,r); fclose(f);} }
+    // Both loads above swallow a missing/unreadable file, and an empty English
+    // dictionary disables auto-detection rather than erroring. Measured: run
+    // from the wrong working directory this harness used to report "48 passed,
+    // 17 failed" — it did fail, but as 17 scattered assertion failures with 48
+    // passes that only held because detection was off. That sends whoever hits
+    // it (most likely on Windows, where CWD is set by CTest rather than by
+    // run_tests.sh) hunting engine bugs. One diagnostic beats seventeen.
+    if (eng.empty() || viet.empty()) {
+        printf("FAIL: dictionaries missing or unreadable from CWD "
+               "(expected ../data/*.dat relative to core/tests)\n");
+        return 2;
+    }
     initEnglishDict((const Byte*)eng.data(), (int)eng.size());
     initVietByTelexDict((const Byte*)viet.data(), (int)viet.size());
     vKeyHookState* st = (vKeyHookState*)vKeyInit();
