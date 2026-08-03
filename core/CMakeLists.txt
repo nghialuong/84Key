@@ -52,6 +52,22 @@ if(MSVC)
     target_compile_options(key84_engine PUBLIC /utf-8 /W3 /EHsc)
     # fopen() in the test harnesses; the engine is otherwise clean.
     target_compile_definitions(key84_engine PUBLIC _CRT_SECURE_NO_WARNINGS)
+    # <windows.h> reaches every Windows TU through DataType.h, and rpcndr.h
+    # declares a global `byte`. DataType.h:14 also does `using namespace std;`,
+    # so from C++17 on — where std::byte exists — every unqualified `byte` in
+    # the Windows SDK headers becomes ambiguous (C2872, ~40 of them in objidl.h
+    # and oaidl.h alone). Measured on windows-latest, not predicted.
+    #
+    # _HAS_STD_BYTE=0 is the MSVC STL's own switch for this collision, and it
+    # costs nothing here: the project has never used std::byte, it has its own
+    # `typedef unsigned char Byte` (DataType.h:40).
+    #
+    # PUBLIC because the W1 host layer will include Engine.h and <windows.h>
+    # together and would hit this on its first C++17 translation unit.
+    #
+    # The root cause is `using namespace std;` in a public header — inherited
+    # from upstream OpenKey, and not something to unpick inside a build fix.
+    target_compile_definitions(key84_engine PUBLIC _HAS_STD_BYTE=0)
 else()
     target_compile_options(key84_engine PRIVATE -Wall)
 endif()
