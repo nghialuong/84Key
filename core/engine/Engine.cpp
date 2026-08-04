@@ -92,6 +92,16 @@ vector<Uint32> _typingStatesData;
  */
 static Uint32 KeyStates[MAX_BUFF];
 static Byte _stateIndex = 0;
+//KeyStates is only meaningful while it still describes TypingWord. The word
+//history restores the word on screen, and several rewrites reshape it, without
+//either being able to say which keys produced the result — so the raw keys are
+//snapshotted alongside the history below, and _rawStale marks the cases that
+//cannot be reconstructed. Consumers that rebuild a whole word out of KeyStates
+//(the English restore, the wrong-spelling restore) must not run while it is set:
+//they would delete _index characters off the screen and type back whatever
+//unrelated keys were left in the buffer.
+static list<vector<Uint32>> _typingRawStates; //raw KeyStates per history entry, pushed in lockstep with _typingStates
+static bool _rawStale = false;
 
 static bool tempDisableKey = false;
 //Set when a standalone vowel is toggled back to a literal letter this word
@@ -147,6 +157,8 @@ void* vKeyInit() {
     _useSpellCheckingBefore = vCheckSpelling;
     _typingStatesData.clear();
     _typingStates.clear();
+    _typingRawStates.clear();
+    _rawStale = false;
     _longWordHelper.clear();
     return &HookState;
 }
@@ -387,6 +399,22 @@ void insertState(const Uint16& keyCode, const bool& isCaps) {
     }
 }
 
+//Every push to _typingStates needs one of these, so the two lists stay the same
+//length and restoreLastTypingState() can pop them together. `trustworthy` is
+//false for entries whose raw keys we do not have: spaces and special characters
+//(the history holds the characters themselves), macro expansions (the text came
+//from the macro, not from typing), and the overflow chunks of a long word (the
+//raw keys for those have already been shifted out of KeyStates).
+static vector<Uint32> _rawSnapshot;
+static void pushRawSnapshot(bool trustworthy) {
+    _rawSnapshot.clear();
+    if (trustworthy && !_rawStale) {
+        for (int r = 0; r < _stateIndex; r++)
+            _rawSnapshot.push_back(KeyStates[r]);
+    }
+    _typingRawStates.push_back(_rawSnapshot);
+}
+
 void saveWord() {
     //save word history
     if (hCode != vReplaceMaro) {
@@ -396,11 +424,13 @@ void saveWord() {
                 for (i = 0; i < _longWordHelper.size(); i++) {
                     if (i != 0 && i % MAX_BUFF == 0) { //save if overflow
                         _typingStates.push_back(_typingStatesData);
+                        pushRawSnapshot(false);
                         _typingStatesData.clear();
                     }
                     _typingStatesData.push_back(_longWordHelper[i]);
                 }
                 _typingStates.push_back(_typingStatesData);
+                pushRawSnapshot(false);
                 _longWordHelper.clear();
             }
             
@@ -410,17 +440,20 @@ void saveWord() {
                 _typingStatesData.push_back(TypingWord[i]);
             }
             _typingStates.push_back(_typingStatesData);
+            pushRawSnapshot(true);
         }
     } else { //save macro words
         _typingStatesData.clear();
         for (i = 0; i < hMacroData.size(); i++) {
             if (i != 0 && i % MAX_BUFF == 0) { //break if overflow
                 _typingStates.push_back(_typingStatesData);
+                pushRawSnapshot(false);
                 _typingStatesData.clear();
             }
             _typingStatesData.push_back(hMacroData[i]);
         }
         _typingStates.push_back(_typingStatesData);
+        pushRawSnapshot(false);
     }
 }
 
@@ -430,6 +463,7 @@ void saveWord(const Uint32& keyCode, const int& count) {
         _typingStatesData.push_back(keyCode);
     }
     _typingStates.push_back(_typingStatesData);
+    pushRawSnapshot(false);
 }
 
 void saveSpecialChar() {
@@ -438,6 +472,7 @@ void saveSpecialChar() {
         _typingStatesData.push_back(_specialChar[i]);
     }
     _typingStates.push_back(_typingStatesData);
+    pushRawSnapshot(false);
     _specialChar.clear();
 }
 
@@ -445,6 +480,15 @@ void restoreLastTypingState() {
     if (_typingStates.size() > 0) {
         _typingStatesData = _typingStates.back();
         _typingStates.pop_back();
+        //Pop the raw keys with the word they belong to. The caller has usually
+        //just been through startNewSession(), which zeroed _stateIndex, so
+        //without this the word comes back on screen with an empty raw buffer and
+        //the next word break rewrites it from the few keys typed since.
+        _rawSnapshot.clear();
+        if (_typingRawStates.size() > 0) {
+            _rawSnapshot = _typingRawStates.back();
+            _typingRawStates.pop_back();
+        }
         if (_typingStatesData.size() > 0){
             if (_typingStatesData[0] == KEY_SPACE) {
                 _spaceCount = (int)_typingStatesData.size();
@@ -458,12 +502,24 @@ void restoreLastTypingState() {
                     TypingWord[i] = _typingStatesData[i];
                 }
                 _index = (Byte)_typingStatesData.size();
+                if (_rawSnapshot.size() > 0 && _rawSnapshot.size() <= MAX_BUFF) {
+                    for (i = 0; i < _rawSnapshot.size(); i++)
+                        KeyStates[i] = _rawSnapshot[i];
+                    _stateIndex = (Byte)_rawSnapshot.size();
+                    _rawStale = false;
+                } else {
+                    //Word restored with no raw keys behind it (macro, long-word
+                    //overflow): it is back on screen, but nothing may rebuild it.
+                    _stateIndex = 0;
+                    _rawStale = true;
+                }
             }
         }
     }
 }
 
 void startNewSession() {
+    _rawStale = false;      //a fresh word starts with an empty, and so honest, raw buffer
     _index = 0;
     hBPC = 0;
     hNCC = 0;
