@@ -1772,7 +1772,10 @@ void vKeyHandleEvent(const vKeyEvent& event,
             vCheckSpelling = _useSpellCheckingBefore;
             _willTempOffEngine = false;
         } else if (hCode == vReplaceMaro || _hasHandleQuickConsonant) {
+            //Ending the word without going through startNewSession(): clear the
+            //raw buffer too, or the next word starts out carrying this one's keys.
             _index = 0;
+            _stateIndex = 0;
         }
         
         //insert key for macro function
@@ -1845,6 +1848,20 @@ void vKeyHandleEvent(const vKeyEvent& event,
                 restoreLastTypingState();
             }
         } else {
+            //Dropping one raw key per deleted character is only right while the
+            //word is literal — one key, one character. Telex is usually not:
+            //"ddoongf" is seven keys and four characters, and even an English
+            //word passes through states that are not ("mes" renders as "mé",
+            //because the s was taken as a tone key), so checking the last
+            //character alone proves nothing. Require the whole buffer to match;
+            //anything else, and the raw keys stop describing what is on screen.
+            bool literal = (_index == _stateIndex);
+            for (i = 0; literal && i < _index; i++) {
+                if (TypingWord[i] != KeyStates[i])
+                    literal = false;
+            }
+            if (!literal)
+                _rawStale = true;
             if (_stateIndex > 0) {
                 _stateIndex--;
             }
