@@ -1272,7 +1272,12 @@ bool checkRestoreIfWrongSpelling(const int& handleCode) {
     for (ii = 0; ii < _index; ii++) {
         if (!IS_CONSONANT(CHR(ii)) &&
             (TypingWord[ii] & MARK_MASK || TypingWord[ii] & TONE_MASK || TypingWord[ii] & TONEW_MASK)) {
-            
+            //Same delete-the-word-and-retype-the-raw-keys move as the English
+            //restore, but reached without going through buildEngRawFromStates(),
+            //so it needs its own check.
+            if (_rawStale || _stateIndex == 0)
+                return false;
+
             hCode = handleCode;
             hBPC = _index;
             hNCC = _stateIndex;
@@ -1406,7 +1411,10 @@ static bool engDetectEnabled() {
 //Rebuild _engRawWord from the raw keystroke history (KeyStates). Returns false
 //if the word is empty, too long, or contains a non-letter key.
 static bool buildEngRawFromStates() {
-    if (_stateIndex < 2 || _stateIndex > MAX_BUFF)
+    //The one place every raw-key decision passes through, so _rawStale gates
+    //shouldTreatAsEnglish(), restoreEnglishAtBreak() and both doubled-tone paths
+    //at once. A word whose raw keys we cannot vouch for is left exactly as it is.
+    if (_rawStale || _stateIndex < 2 || _stateIndex > MAX_BUFF)
         return false;
     _engRawWord.clear();
     for (i = 0; i < _stateIndex; i++) {
