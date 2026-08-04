@@ -103,16 +103,36 @@ static void applyAppOutput(u32string& buf, vKeyHookState* st, uint16_t triggerCh
         buf.push_back((char32_t)triggerChar);
 }
 
+// Press Backspace. The host doesn't synthesise anything for a plain delete: for
+// vDoNothing (extCode 2) InputController.mm returns the event, so the OS removes
+// the character itself. Anything else decodes like a normal correction, with no
+// trigger character to append.
+static void pressBackspace(u32string& buf, vKeyHookState* st) {
+    vKeyHandleEvent(vKeyEvent::Keyboard, vKeyEventState::KeyDown, (Uint16)KEY_DELETE, 0, false);
+    if (st->code == vDoNothing) {
+        if (!buf.empty()) buf.pop_back();
+        return;
+    }
+    applyAppOutput(buf, st, 0);
+}
+
 // Type `keys` from a clean engine state; return the visible text. Uppercase = Shift.
+// The token "{BS}" presses Backspace — spelled out rather than given a punctuation
+// character, so every key the engine handles (including "<") stays testable.
 static u32string typeFresh(vKeyHookState* st, const string& keys) {
     vKeyInit();
     u32string buf;
-    for (char ch : keys) {
+    for (size_t i = 0; i < keys.size(); i++) {
+        if (keys.compare(i, 4, "{BS}") == 0) {
+            pressBackspace(buf, st);
+            i += 3;
+            continue;
+        }
         bool caps = false;
-        int kc = asciiToKey(ch, caps);
+        int kc = asciiToKey(keys[i], caps);
         if (kc < 0) continue; // unsupported character
         vKeyHandleEvent(vKeyEvent::Keyboard, vKeyEventState::KeyDown, (Uint16)kc, caps ? 1 : 0, false);
-        uint16_t literal = (uint16_t)(unsigned char)ch; // doNothing / restore trigger
+        uint16_t literal = (uint16_t)(unsigned char)keys[i]; // doNothing / restore trigger
         applyAppOutput(buf, st, literal);
     }
     return buf;
@@ -244,7 +264,14 @@ static string vietToTelex(const u32string& s) {
     return out;
 }
 
-static void runFixtureFile(vKeyHookState* st, const string& path, const string& name) {
+// Fixtures that gate the build rather than just reporting. Article round-trips are
+// report-only (prose is full of judgement calls), but a regression fixture that
+// pins a specific defect has to be able to fail the build.
+static bool isGatedFixture(const string& name) {
+    return name == "backspace_restore.txt";
+}
+
+static void runFixtureFile(vKeyHookState* st, const string& path, const string& name, bool gated) {
     FILE* f = fopen(path.c_str(), "rb");
     if (!f) return;
     string data; char b[65536]; size_t r;
@@ -298,14 +325,15 @@ static void runFixtureFile(vKeyHookState* st, const string& path, const string& 
         vAutoDetectEnglish = savedDetect; vUseModernOrthography = savedModern;
         string exp = rstripWs(expected);
         bool ok = (got == exp);
-        if (ok) { g_fixPass++; filePass++; }
+        if (ok) { (gated ? g_pass : g_fixPass)++; filePass++; }
         else {
-            g_fixFail++; fileFail++;
+            (gated ? g_fail : g_fixFail)++; fileFail++;
             printf("    [FAIL] %s:%d  \"%s\" -> \"%s\"  (expect \"%s\")\n",
                    name.c_str(), lineNo, rstripWs(keys).c_str(), got.c_str(), exp.c_str());
         }
     }
-    printf("  %-24s %d/%d passed\n", name.c_str(), filePass, filePass + fileFail);
+    printf("  %-24s %d/%d passed%s\n", name.c_str(), filePass, filePass + fileFail,
+           gated ? "  (gating)" : "");
 }
 
 static void runFixtures(vKeyHookState* st, const char* dir) {
@@ -321,9 +349,11 @@ static void runFixtures(vKeyHookState* st, const char* dir) {
     if (files.empty()) return;
     sort(files.begin(), files.end());
     printf("\n== Article fixtures (%s/*.txt) ==\n", dir);
-    for (const string& n : files) runFixtureFile(st, string(dir) + "/" + n, n);
+    for (const string& n : files)
+        runFixtureFile(st, string(dir) + "/" + n, n, isGatedFixture(n));
     resetFixtureOptions();
-    printf("  fixtures total: %d passed, %d failed (report-only — not part of the gate)\n",
+    printf("  fixtures total: %d passed, %d failed (report-only — not part of the gate;\n"
+           "                  files marked (gating) are counted in the gate instead)\n",
            g_fixPass, g_fixFail);
 }
 

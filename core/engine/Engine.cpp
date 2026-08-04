@@ -92,6 +92,16 @@ vector<Uint32> _typingStatesData;
  */
 static Uint32 KeyStates[MAX_BUFF];
 static Byte _stateIndex = 0;
+//KeyStates is only meaningful while it still describes TypingWord. The word
+//history restores the word on screen, and several rewrites reshape it, without
+//either being able to say which keys produced the result — so the raw keys are
+//snapshotted alongside the history below, and _rawStale marks the cases that
+//cannot be reconstructed. Consumers that rebuild a whole word out of KeyStates
+//(the English restore, the wrong-spelling restore) must not run while it is set:
+//they would delete _index characters off the screen and type back whatever
+//unrelated keys were left in the buffer.
+static list<vector<Uint32>> _typingRawStates; //raw KeyStates per history entry, pushed in lockstep with _typingStates
+static bool _rawStale = false;
 
 static bool tempDisableKey = false;
 //Set when a standalone vowel is toggled back to a literal letter this word
@@ -147,6 +157,8 @@ void* vKeyInit() {
     _useSpellCheckingBefore = vCheckSpelling;
     _typingStatesData.clear();
     _typingStates.clear();
+    _typingRawStates.clear();
+    _rawStale = false;
     _longWordHelper.clear();
     return &HookState;
 }
@@ -387,6 +399,22 @@ void insertState(const Uint16& keyCode, const bool& isCaps) {
     }
 }
 
+//Every push to _typingStates needs one of these, so the two lists stay the same
+//length and restoreLastTypingState() can pop them together. `trustworthy` is
+//false for entries whose raw keys we do not have: spaces and special characters
+//(the history holds the characters themselves), macro expansions (the text came
+//from the macro, not from typing), and the overflow chunks of a long word (the
+//raw keys for those have already been shifted out of KeyStates).
+static vector<Uint32> _rawSnapshot;
+static void pushRawSnapshot(bool trustworthy) {
+    _rawSnapshot.clear();
+    if (trustworthy && !_rawStale) {
+        for (int r = 0; r < _stateIndex; r++)
+            _rawSnapshot.push_back(KeyStates[r]);
+    }
+    _typingRawStates.push_back(_rawSnapshot);
+}
+
 void saveWord() {
     //save word history
     if (hCode != vReplaceMaro) {
@@ -396,11 +424,13 @@ void saveWord() {
                 for (i = 0; i < _longWordHelper.size(); i++) {
                     if (i != 0 && i % MAX_BUFF == 0) { //save if overflow
                         _typingStates.push_back(_typingStatesData);
+                        pushRawSnapshot(false);
                         _typingStatesData.clear();
                     }
                     _typingStatesData.push_back(_longWordHelper[i]);
                 }
                 _typingStates.push_back(_typingStatesData);
+                pushRawSnapshot(false);
                 _longWordHelper.clear();
             }
             
@@ -410,17 +440,20 @@ void saveWord() {
                 _typingStatesData.push_back(TypingWord[i]);
             }
             _typingStates.push_back(_typingStatesData);
+            pushRawSnapshot(true);
         }
     } else { //save macro words
         _typingStatesData.clear();
         for (i = 0; i < hMacroData.size(); i++) {
             if (i != 0 && i % MAX_BUFF == 0) { //break if overflow
                 _typingStates.push_back(_typingStatesData);
+                pushRawSnapshot(false);
                 _typingStatesData.clear();
             }
             _typingStatesData.push_back(hMacroData[i]);
         }
         _typingStates.push_back(_typingStatesData);
+        pushRawSnapshot(false);
     }
 }
 
@@ -430,6 +463,7 @@ void saveWord(const Uint32& keyCode, const int& count) {
         _typingStatesData.push_back(keyCode);
     }
     _typingStates.push_back(_typingStatesData);
+    pushRawSnapshot(false);
 }
 
 void saveSpecialChar() {
@@ -438,6 +472,7 @@ void saveSpecialChar() {
         _typingStatesData.push_back(_specialChar[i]);
     }
     _typingStates.push_back(_typingStatesData);
+    pushRawSnapshot(false);
     _specialChar.clear();
 }
 
@@ -445,6 +480,15 @@ void restoreLastTypingState() {
     if (_typingStates.size() > 0) {
         _typingStatesData = _typingStates.back();
         _typingStates.pop_back();
+        //Pop the raw keys with the word they belong to. The caller has usually
+        //just been through startNewSession(), which zeroed _stateIndex, so
+        //without this the word comes back on screen with an empty raw buffer and
+        //the next word break rewrites it from the few keys typed since.
+        _rawSnapshot.clear();
+        if (_typingRawStates.size() > 0) {
+            _rawSnapshot = _typingRawStates.back();
+            _typingRawStates.pop_back();
+        }
         if (_typingStatesData.size() > 0){
             if (_typingStatesData[0] == KEY_SPACE) {
                 _spaceCount = (int)_typingStatesData.size();
@@ -458,12 +502,24 @@ void restoreLastTypingState() {
                     TypingWord[i] = _typingStatesData[i];
                 }
                 _index = (Byte)_typingStatesData.size();
+                if (_rawSnapshot.size() > 0 && _rawSnapshot.size() <= MAX_BUFF) {
+                    for (i = 0; i < _rawSnapshot.size(); i++)
+                        KeyStates[i] = _rawSnapshot[i];
+                    _stateIndex = (Byte)_rawSnapshot.size();
+                    _rawStale = false;
+                } else {
+                    //Word restored with no raw keys behind it (macro, long-word
+                    //overflow): it is back on screen, but nothing may rebuild it.
+                    _stateIndex = 0;
+                    _rawStale = true;
+                }
             }
         }
     }
 }
 
 void startNewSession() {
+    _rawStale = false;      //a fresh word starts with an empty, and so honest, raw buffer
     _index = 0;
     hBPC = 0;
     hNCC = 0;
@@ -1216,7 +1272,12 @@ bool checkRestoreIfWrongSpelling(const int& handleCode) {
     for (ii = 0; ii < _index; ii++) {
         if (!IS_CONSONANT(CHR(ii)) &&
             (TypingWord[ii] & MARK_MASK || TypingWord[ii] & TONE_MASK || TypingWord[ii] & TONEW_MASK)) {
-            
+            //Same delete-the-word-and-retype-the-raw-keys move as the English
+            //restore, but reached without going through buildEngRawFromStates(),
+            //so it needs its own check.
+            if (_rawStale || _stateIndex == 0)
+                return false;
+
             hCode = handleCode;
             hBPC = _index;
             hNCC = _stateIndex;
@@ -1350,7 +1411,10 @@ static bool engDetectEnabled() {
 //Rebuild _engRawWord from the raw keystroke history (KeyStates). Returns false
 //if the word is empty, too long, or contains a non-letter key.
 static bool buildEngRawFromStates() {
-    if (_stateIndex < 2 || _stateIndex > MAX_BUFF)
+    //The one place every raw-key decision passes through, so _rawStale gates
+    //shouldTreatAsEnglish(), restoreEnglishAtBreak() and both doubled-tone paths
+    //at once. A word whose raw keys we cannot vouch for is left exactly as it is.
+    if (_rawStale || _stateIndex < 2 || _stateIndex > MAX_BUFF)
         return false;
     _engRawWord.clear();
     for (i = 0; i < _stateIndex; i++) {
@@ -1700,6 +1764,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         if (!_isCharKeyCode) { //clear all line cache
             _specialChar.clear();
             _typingStates.clear();
+            _typingRawStates.clear();   //the two lists are only meaningful together
         } else { //check and save current word
             if (_spaceCount > 0) {
                 saveWord(KEY_SPACE, _spaceCount);
@@ -1716,7 +1781,13 @@ void vKeyHandleEvent(const vKeyEvent& event,
             vCheckSpelling = _useSpellCheckingBefore;
             _willTempOffEngine = false;
         } else if (hCode == vReplaceMaro || _hasHandleQuickConsonant) {
+            //Ending the word without going through startNewSession(): clear the
+            //raw buffer too, or the next word starts out carrying this one's keys —
+            //and clear the stale mark with it, or a doubt about the word just ended
+            //keeps English detection switched off for the words that follow.
             _index = 0;
+            _stateIndex = 0;
+            _rawStale = false;
         }
         
         //insert key for macro function
@@ -1789,6 +1860,20 @@ void vKeyHandleEvent(const vKeyEvent& event,
                 restoreLastTypingState();
             }
         } else {
+            //Dropping one raw key per deleted character is only right while the
+            //word is literal — one key, one character. Telex is usually not:
+            //"ddoongf" is seven keys and four characters, and even an English
+            //word passes through states that are not ("mes" renders as "mé",
+            //because the s was taken as a tone key), so checking the last
+            //character alone proves nothing. Require the whole buffer to match;
+            //anything else, and the raw keys stop describing what is on screen.
+            bool literal = (_index == _stateIndex);
+            for (i = 0; literal && i < _index; i++) {
+                if (TypingWord[i] != KeyStates[i])
+                    literal = false;
+            }
+            if (!literal)
+                _rawStale = true;
             if (_stateIndex > 0) {
                 _stateIndex--;
             }
@@ -1911,6 +1996,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
             _index = 0;
             tempDisableKey = false;
             _stateIndex = 0;
+            _rawStale = false;      //new word from here; the empty raw buffer is honest
             hExt = 3;
             _specialChar.push_back(data | (_isCaps ? CAPS_MASK : 0));
         }
