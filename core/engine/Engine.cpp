@@ -1764,6 +1764,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
         if (!_isCharKeyCode) { //clear all line cache
             _specialChar.clear();
             _typingStates.clear();
+            _typingRawStates.clear();   //the two lists are only meaningful together
         } else { //check and save current word
             if (_spaceCount > 0) {
                 saveWord(KEY_SPACE, _spaceCount);
@@ -1781,9 +1782,12 @@ void vKeyHandleEvent(const vKeyEvent& event,
             _willTempOffEngine = false;
         } else if (hCode == vReplaceMaro || _hasHandleQuickConsonant) {
             //Ending the word without going through startNewSession(): clear the
-            //raw buffer too, or the next word starts out carrying this one's keys.
+            //raw buffer too, or the next word starts out carrying this one's keys —
+            //and clear the stale mark with it, or a doubt about the word just ended
+            //keeps English detection switched off for the words that follow.
             _index = 0;
             _stateIndex = 0;
+            _rawStale = false;
         }
         
         //insert key for macro function
@@ -1992,6 +1996,7 @@ void vKeyHandleEvent(const vKeyEvent& event,
             _index = 0;
             tempDisableKey = false;
             _stateIndex = 0;
+            _rawStale = false;      //new word from here; the empty raw buffer is honest
             hExt = 3;
             _specialChar.push_back(data | (_isCaps ? CAPS_MASK : 0));
         }
