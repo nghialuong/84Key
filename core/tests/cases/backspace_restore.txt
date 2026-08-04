@@ -1,0 +1,29 @@
+# Backspace across a word boundary must not corrupt the word you go back to.
+#
+# The engine keeps two buffers for the word being typed: TypingWord (what is on
+# screen) and KeyStates (the raw keys you pressed, used by English detection).
+# Backspacing past a space reloads TypingWord from the line history; if KeyStates
+# is not reloaded with it, the word-break English restore deletes the whole
+# visible word and rewrites it from whatever raw keys are left over — typing
+# "animated" produced "ed".
+#
+# "{BS}" presses Backspace. Every case ends in another word so the break the
+# restore hangs off of is explicit rather than trailing whitespace.
+#
+# This file GATES the build (see isGatedFixture in typing_sim_test.cpp): these
+# pin specific defects, unlike the report-only article round-trips.
+@input=telex
+@detect=on
+
+# The reported bug: back up into the previous word, type on, break.
+animat ed{BS}{BS}{BS}ed ok => animated ok
+# Same desync, and the leftover raw keys spell a different English word.
+hello ok{BS}{BS}{BS}world ok => helloworld ok
+
+# Vietnamese must keep working: backspace inside a word with diacritics, and
+# then keep applying tone keys to what is left.
+ddoongf{BS} ok => đồn ok
+ddoongf{BS}s ok => đốn ok
+
+# Backspacing over several words and a space, then typing a fresh one.
+toi an com{BS}{BS}{BS}{BS}{BS}{BS}xyz ok => toi xyz ok
