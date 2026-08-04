@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Words swallowed when you backspace into an earlier word**: going back past a
+  space to fix a word you had already finished brought the word back on screen
+  but not the keystrokes behind it, so the engine went on believing the few keys
+  typed since were the raw form of the whole word. At the next word break the
+  English restore acted on that: it deleted the word it could see and typed back
+  what it held. Typing "animat", space, "ed", then backspacing into the previous
+  word and finishing it left "ed" where "animated" should have been. The raw keys
+  now travel with the word history, a backspace only keeps trusting them while
+  they still describe what is on screen, and anything that rewrites a whole word
+  from raw keys is declined outright when they cannot be vouched for.
+
 ## [0.1.6] - 2026-07-31
 
 ### Fixed
