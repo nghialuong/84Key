@@ -56,8 +56,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.nghialuong.key84
         INFOPLIST_FILE: Resources/Info.plist
         SWIFT_OBJC_BRIDGING_HEADER: Bridge/Key84-Bridging-Header.h
-        MARKETING_VERSION: "0.1.6"
-        CURRENT_PROJECT_VERSION: "8"
+        MARKETING_VERSION: "0.1.7"
+        CURRENT_PROJECT_VERSION: "9"
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_HARDENED_RUNTIME: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
