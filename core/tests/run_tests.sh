@@ -16,3 +16,7 @@ c++ -std=c++14 -O2 -o "$OUT" engine_test.cpp $ENGINE_SRC
 SIM="${TMPDIR:-/tmp}/key84_typing_sim"
 c++ -std=c++14 -O2 -o "$SIM" typing_sim_test.cpp $ENGINE_SRC
 "$SIM"
+
+# Invariants of the macOS send layer (source-level — nothing here can call
+# CGEvent, and the properties they guard only fail under load in a real app).
+bash ../../platform/macos/tests/send_invariants_test.sh

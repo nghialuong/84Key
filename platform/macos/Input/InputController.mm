@@ -28,6 +28,8 @@
 #import <Carbon/Carbon.h>
 #import <ApplicationServices/ApplicationServices.h>
 
+#include <mach/mach_time.h>
+
 #include "Engine.h"
 
 // Engine option globals (defined in EngineGlobals.cpp).
@@ -84,8 +86,6 @@ NSArray* gUnicodeCompoundApp = @[@"com.apple.",
 
 CGEventSourceRef gEventSource = NULL;
 vKeyHookState* pData = NULL;
-CGEventRef gBackSpaceDown = NULL;
-CGEventRef gBackSpaceUp = NULL;
 
 UniChar gNewChar, gNewCharHi;
 CGEventRef gNewEventDown, gNewEventUp;
@@ -157,6 +157,25 @@ BOOL isBrowserApp(NSString* topApp) {
     return false;
 }
 
+// The one place a synthetic event leaves this file.
+//
+// Two properties every posted event needs, and which were previously set at
+// some call sites and not others:
+//   * kCGEventFlagMaskNonCoalesced — a transform posts a burst (empty char, N
+//     backspaces, then the replacement) and the window server must not merge
+//     any two of them; a merged delete leaves the old character behind.
+//   * a fresh timestamp — CGEventCreate* stamps the event when it is created,
+//     and events that are reposted (or built once and cached) carry a stale
+//     time. A burst of identically-stamped key events is what a receiving app
+//     reads as key repeat, and repeat is exactly what it is allowed to drop.
+//     This is only visible when the app is busy enough to take several of them
+//     in one run-loop pass, i.e. when typing fast.
+void PostSynthetic(CGEventRef e) {
+    CGEventSetFlags(e, CGEventGetFlags(e) | kCGEventFlagMaskNonCoalesced);
+    CGEventSetTimestamp(e, mach_absolute_time());
+    CGEventTapPostEvent(gProxy, e);
+}
+
 void InsertKeyLength(const Uint8& len) {
     gSyncKey.push_back(len);
 }
@@ -166,8 +185,8 @@ void SendPureCharacter(const Uint16& ch) {
     gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
     CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &ch);
     CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &ch);
-    CGEventTapPostEvent(gProxy, gNewEventDown);
-    CGEventTapPostEvent(gProxy, gNewEventUp);
+    PostSynthetic(gNewEventDown);
+    PostSynthetic(gNewEventUp);
     CFRelease(gNewEventDown);
     CFRelease(gNewEventUp);
     if (IS_DOUBLE_CODE(vCodeTable)) {
@@ -190,20 +209,18 @@ void SendKeyCode(Uint32 data) {
         } else {
             privateFlag &= ~kCGEventFlagMaskShift;
         }
-        privateFlag |= kCGEventFlagMaskNonCoalesced;
-
         CGEventSetFlags(gNewEventDown, privateFlag);
         CGEventSetFlags(gNewEventUp, privateFlag);
-        CGEventTapPostEvent(gProxy, gNewEventDown);
-        CGEventTapPostEvent(gProxy, gNewEventUp);
+        PostSynthetic(gNewEventDown);
+        PostSynthetic(gNewEventUp);
     } else {
         if (vCodeTable == 0) { // unicode 2 bytes code
             gNewEventDown = CGEventCreateKeyboardEvent(gEventSource, 0, true);
             gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
             CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &gNewChar);
             CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &gNewChar);
-            CGEventTapPostEvent(gProxy, gNewEventDown);
-            CGEventTapPostEvent(gProxy, gNewEventUp);
+            PostSynthetic(gNewEventDown);
+            PostSynthetic(gNewEventUp);
         } else if (vCodeTable == 1 || vCodeTable == 2 || vCodeTable == 4) { // VNI Windows, TCVN3, CP1258: 1 byte code
             gNewCharHi = HIBYTE(gNewChar);
             gNewChar = LOBYTE(gNewChar);
@@ -212,8 +229,8 @@ void SendKeyCode(Uint32 data) {
             gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
             CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &gNewChar);
             CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &gNewChar);
-            CGEventTapPostEvent(gProxy, gNewEventDown);
-            CGEventTapPostEvent(gProxy, gNewEventUp);
+            PostSynthetic(gNewEventDown);
+            PostSynthetic(gNewEventUp);
             if (gNewCharHi > 32) {
                 if (vCodeTable == 2) // VNI
                     InsertKeyLength(2);
@@ -223,8 +240,8 @@ void SendKeyCode(Uint32 data) {
                 gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
                 CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &gNewCharHi);
                 CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &gNewCharHi);
-                CGEventTapPostEvent(gProxy, gNewEventDown);
-                CGEventTapPostEvent(gProxy, gNewEventUp);
+                PostSynthetic(gNewEventDown);
+                PostSynthetic(gNewEventUp);
             } else {
                 if (vCodeTable == 2) // VNI
                     InsertKeyLength(1);
@@ -239,8 +256,8 @@ void SendKeyCode(Uint32 data) {
             gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
             CGEventKeyboardSetUnicodeString(gNewEventDown, (gNewCharHi > 0 ? 2 : 1), gUniChar);
             CGEventKeyboardSetUnicodeString(gNewEventUp, (gNewCharHi > 0 ? 2 : 1), gUniChar);
-            CGEventTapPostEvent(gProxy, gNewEventDown);
-            CGEventTapPostEvent(gProxy, gNewEventUp);
+            PostSynthetic(gNewEventDown);
+            PostSynthetic(gNewEventUp);
         }
     }
     CFRelease(gNewEventDown);
@@ -260,21 +277,31 @@ void SendEmptyCharacter() {
     gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
     CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &gNewChar);
     CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &gNewChar);
-    CGEventTapPostEvent(gProxy, gNewEventDown);
-    CGEventTapPostEvent(gProxy, gNewEventUp);
+    PostSynthetic(gNewEventDown);
+    PostSynthetic(gNewEventUp);
     CFRelease(gNewEventDown);
     CFRelease(gNewEventUp);
 }
 
+// One backspace, built fresh. A transform sends these in a run, and reposting a
+// single cached event object hands the app the same event several times over —
+// same identity, same creation time — which is the shape it drops as repeat.
+void PostBackspace() {
+    CGEventRef down = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, true);
+    CGEventRef up = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, false);
+    PostSynthetic(down);
+    PostSynthetic(up);
+    CFRelease(down);
+    CFRelease(up);
+}
+
 void SendBackspace() {
-    CGEventTapPostEvent(gProxy, gBackSpaceDown);
-    CGEventTapPostEvent(gProxy, gBackSpaceUp);
+    PostBackspace();
 
     if (IS_DOUBLE_CODE(vCodeTable)) { // VNI or Unicode Compound
         if (gSyncKey.size() > 0 && gSyncKey.back() > 1) {
             if (!(vCodeTable == 3 && containUnicodeCompoundApp(FRONT_APP))) {
-                CGEventTapPostEvent(gProxy, gBackSpaceDown);
-                CGEventTapPostEvent(gProxy, gBackSpaceUp);
+                PostBackspace();
             }
         }
         if (gSyncKey.size() > 0)
@@ -287,21 +314,17 @@ void SendShiftAndLeftArrow() {
     CGEventRef eventVkeyUp = CGEventCreateKeyboardEvent(gEventSource, KEY_LEFT, false);
     CGEventFlags privateFlag = CGEventGetFlags(eventVkeyDown);
     privateFlag |= kCGEventFlagMaskShift;
-    // Don't let the window server coalesce this selection key with the insert
-    // that immediately follows — async web editors (Google Docs) otherwise apply
-    // the insert before the selection lands, dropping the deletion.
-    privateFlag |= kCGEventFlagMaskNonCoalesced;
     CGEventSetFlags(eventVkeyDown, privateFlag);
     CGEventSetFlags(eventVkeyUp, privateFlag);
 
-    CGEventTapPostEvent(gProxy, eventVkeyDown);
-    CGEventTapPostEvent(gProxy, eventVkeyUp);
+    PostSynthetic(eventVkeyDown);
+    PostSynthetic(eventVkeyUp);
 
     if (IS_DOUBLE_CODE(vCodeTable)) { // VNI or Unicode Compound
         if (gSyncKey.size() > 0 && gSyncKey.back() > 1) {
             if (!(vCodeTable == 3 && containUnicodeCompoundApp(FRONT_APP))) {
-                CGEventTapPostEvent(gProxy, eventVkeyDown);
-                CGEventTapPostEvent(gProxy, eventVkeyUp);
+                PostSynthetic(eventVkeyDown);
+                PostSynthetic(eventVkeyUp);
             }
         }
         if (gSyncKey.size() > 0)
@@ -387,12 +410,8 @@ void SendNewCharString(const bool& dataFromMacro = false, const Uint16& offset =
     gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
     CGEventKeyboardSetUnicodeString(gNewEventDown, gWillContinueSending ? 16 : gNewCharSize - offset, gNewCharString);
     CGEventKeyboardSetUnicodeString(gNewEventUp, gWillContinueSending ? 16 : gNewCharSize - offset, gNewCharString);
-    // Non-coalesced so the preceding backspace/selection isn't merged with this
-    // insert by the window server (async web editors otherwise drop the delete).
-    CGEventSetFlags(gNewEventDown, CGEventGetFlags(gNewEventDown) | kCGEventFlagMaskNonCoalesced);
-    CGEventSetFlags(gNewEventUp, CGEventGetFlags(gNewEventUp) | kCGEventFlagMaskNonCoalesced);
-    CGEventTapPostEvent(gProxy, gNewEventDown);
-    CGEventTapPostEvent(gProxy, gNewEventUp);
+    PostSynthetic(gNewEventDown);
+    PostSynthetic(gNewEventUp);
     CFRelease(gNewEventDown);
     CFRelease(gNewEventUp);
 
@@ -590,10 +609,19 @@ bool replaceFocusedTextViaAX(int backspaceCount, NSString* newText) {
 
     NSString* wantBase = asciiFold(newText);
     bool ok = false;
-    int attempts = 0;
-    for (attempts = 0; attempts < 20 && !ok; attempts++) {
-        if (attempts > 0)
+    bool giveUp = false;
+    // This runs inside the event-tap callback, so every microsecond spent here is
+    // a microsecond the next keystroke waits — and a callback that overruns its
+    // budget gets the whole tap disabled by the system. Wait on a wall clock
+    // rather than an attempt count: the AX reads below each have a 50 ms
+    // messaging timeout, so twenty of them could hold the callback for a second.
+    const CFAbsoluteTime deadline = CFAbsoluteTimeGetCurrent() + 0.010; // 10ms
+    for (int attempts = 0; !ok && !giveUp; attempts++) {
+        if (attempts > 0) {
+            if (CFAbsoluteTimeGetCurrent() >= deadline)
+                break;
             usleep(300); // 0.3ms: let the OS finish inserting the pending letters
+        }
 
         CFTypeRef valueRef = NULL, rangeRef = NULL;
         bool readOK = (AXUIElementCopyAttributeValue(focused, kAXValueAttribute, &valueRef) == kAXErrorSuccess &&
@@ -620,7 +648,7 @@ bool replaceFocusedTextViaAX(int backspaceCount, NSString* newText) {
                         }
                         ok = true;
                     } else {
-                        attempts = 20; // write failed; stop and fall back
+                        giveUp = true; // write failed; stop and fall back
                     }
                 }
             }
@@ -648,8 +676,15 @@ static void Key84ToggleLanguage() {
 }
 
 CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void* refcon) {
-    // re-enable the tap if the system disabled it (timeout / user input)
+    // The system disabled the tap (we were too slow, or the user forced input
+    // through). Keystrokes reached the app while it was off and the engine never
+    // saw them, so TypingWord / _index now describe a word that is not the one on
+    // screen — and the next word break would act on that: restoreEnglishAtBreak()
+    // and checkRestoreIfWrongSpelling() both delete _index characters and retype
+    // from the engine's own buffer. Start a new word before re-enabling, so the
+    // gap costs the rest of one word rather than mangling it.
     if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
+        RequestNewSession();
         if (gEventTap) {
             CGEventTapEnable(gEventTap, true);
         }
@@ -782,8 +817,7 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                 } else if (pData->extCode == 2) { // delete key
                     if (gSyncKey.size() > 0) {
                         if (gSyncKey.back() > 1 && (vCodeTable == 2 || !containUnicodeCompoundApp(FRONT_APP))) {
-                            CGEventTapPostEvent(gProxy, gBackSpaceDown);
-                            CGEventTapPostEvent(gProxy, gBackSpaceUp);
+                            PostBackspace();
                         }
                         gSyncKey.pop_back();
                     }
@@ -886,16 +920,6 @@ void ensureEngineInitialized() {
     if (gEventSource == NULL)
         gEventSource = CGEventSourceCreate(kCGEventSourceStatePrivate);
     pData = (vKeyHookState*)vKeyInit();
-    if (gBackSpaceDown == NULL) {
-        gBackSpaceDown = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, true);
-        // Keep each backspace a distinct event so async web editors (Google Docs)
-        // can't coalesce it away before the replacement insert arrives.
-        CGEventSetFlags(gBackSpaceDown, CGEventGetFlags(gBackSpaceDown) | kCGEventFlagMaskNonCoalesced);
-    }
-    if (gBackSpaceUp == NULL) {
-        gBackSpaceUp = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, false);
-        CGEventSetFlags(gBackSpaceUp, CGEventGetFlags(gBackSpaceUp) | kCGEventFlagMaskNonCoalesced);
-    }
 }
 
 } // namespace

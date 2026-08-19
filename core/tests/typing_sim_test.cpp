@@ -549,6 +549,15 @@ int main() {
         {"W6", "nam",       "nam"},
         {"W7", "ddays",     "đáy"},
         {"W8", "ddaays",    "đấy"},     // â needs doubled a
+        // W9-W13: the fast-typing report ("sướng" -> "sương", "triển" -> "triên").
+        // The host decode is what these exercise: a tone landing on ươ/iê rewrites
+        // from the first vowel, so bsp/ncc are 4-5 wide — the widest burst a normal
+        // word produces, and the one the report says goes missing.
+        {"W9",  "suwowngs",  "sướng"},
+        {"W10", "suowngs",   "sướng"},
+        {"W11", "suongws",   "sướng"},
+        {"W12", "trieenr",   "triển"},
+        {"W13", "truwowngs", "trướng"},
     };
     for (auto& c : words) run(st, c);
 
