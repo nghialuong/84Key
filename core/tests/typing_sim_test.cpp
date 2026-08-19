@@ -491,6 +491,76 @@ static void checkAlternateKeyOrdersStayVietnamese(vKeyHookState* st) {
 // it. restoreEnglishAtBreak()'s `differs` check is what guarantees that; without it
 // every clean compound would fire a pointless backspace+retype burst at each word
 // break, and that burst is exactly what misbehaves in browsers and Spotlight.
+// The dictionary stores one Telex spelling per syllable, but Telex accepts several
+// for the same word: "sướng" is "suwowngs" in the file, yet "suowngs", "suonwgs" and
+// "suongws" all type it. Anything that judges a word by its raw keys therefore calls
+// those spellings non-Vietnamese — and dropDoubledToneAtBreak() then strips the mark
+// of every one whose initial consonant happens to be its tone letter, which is the
+// whole s-/r-/x-/f-/j- class. That was the reported bug, found only from a trace of
+// the real app because every case here used the canonical spelling.
+//
+// The oracle is the same word typed with detection OFF, so it cannot drift; English
+// detection must never change what a Vietnamese word looks like, whichever of its
+// spellings was typed.
+static void checkAlternateSpellingsKeepTheirMark(vKeyHookState* st) {
+    FILE* f = fopen("../data/viet_telex.dat", "rb");
+    if (!f) { printf("  [FAIL] C-alt cannot open viet_telex.dat\n"); g_fail++; return; }
+    char line[128];
+    int typed = 0, lost = 0;
+    string firstLoss;
+    while (fgets(line, sizeof line, f)) {
+        string w(line);
+        while (!w.empty() && (w.back() == '\n' || w.back() == '\r')) w.pop_back();
+        if (w.size() < 3) continue;
+        // Only words that can trip the doubled-tone count: a tone key at the end
+        // that also appears somewhere earlier in the keys.
+        if (string("sfrxj").find(w.back()) == string::npos) continue;
+        if (w.find(w.back()) == w.size() - 1) continue;
+
+        vector<string> variants;
+        // the vowel modifier moved to the end ("suwowngs" -> "suowngs" needs the
+        // pair form, so also drop a doubled modifier down to one)
+        for (size_t k = 0; k + 1 < w.size(); k++)
+            if (string("waeo").find(w[k]) != string::npos)
+                variants.push_back(w.substr(0, k) + w.substr(k + 1));
+        for (size_t k = 0; k + 1 < w.size(); k++)
+            if (string("waeo").find(w[k]) != string::npos)
+                variants.push_back(w.substr(0, k) + w.substr(k + 1, w.size() - k - 2) + w[k] + w.back());
+
+        for (const string& v : variants) {
+            if (v == w || v.size() < 3) continue;
+            vAutoDetectEnglish = 0;
+            string off = toUtf8(typeFresh(st, v + " "));
+            string canonical = toUtf8(typeFresh(st, w + " "));
+            string midOff = toUtf8(typeFresh(st, v));
+            vAutoDetectEnglish = 1;
+            string on = toUtf8(typeFresh(st, v + " "));
+            string midOn = toUtf8(typeFresh(st, v));
+            // Only spellings that actually produce the word are evidence; the
+            // generator also emits strings that mean something else entirely.
+            if (off != canonical) continue;
+            // And only the word break is in scope. Where English detection already
+            // claimed the word while it was being typed — "remer" is on the way to
+            // "remember" — deferring to English is the design, and this check has
+            // nothing to say about it.
+            if (midOff != midOn) continue;
+            typed++;
+            if (off != on && lost++ == 0)
+                firstLoss = v + " -> \"" + on + "\" (want \"" + off + "\")";
+        }
+    }
+    fclose(f);
+    // A floor, not a tolerance: if the filter above ever collapses, this fires
+    // instead of the check silently passing on an empty set.
+    const int kMinChecked = 200;
+    bool ok = (lost == 0 && typed >= kMinChecked);
+    printf("  [%s] C-alt %d alternate spellings keep their mark with detection on%s\n",
+           ok ? "PASS" : "FAIL", typed,
+           lost ? (" (" + firstLoss + ")").c_str()
+                : (typed < kMinChecked ? " — examined too few, the filter went vacuous" : ""));
+    ok ? g_pass++ : g_fail++;
+}
+
 static void checkCleanCompoundEmitsNothing(vKeyHookState* st) {
     vKeyInit();
     const char* keys = "imagegen ";
@@ -564,6 +634,15 @@ int main() {
     printf("\n== English auto-detection (app decode, restore at break) ==\n");
     vAutoDetectEnglish = 1;
     Case english[] = {
+        // The reported bug, from a trace of the real app. Telex accepts several key
+        // orders for ươ; the dictionary stores only the canonical "suwowngs", so the
+        // other two are not found by the raw-keys lookup dropDoubledToneAtBreak()
+        // guards on. Both then look like a doubled tone key — because the word's own
+        // initial consonant IS the tone letter — and lose their mark at the break.
+        {"E-alt1", "suowngs ", "sướng "},   // uow: one w for the pair
+        {"E-alt2", "suonwgs ", "sướng "},   // w after the coda
+        {"E-alt3", "suongws ", "sướng "},
+        {"E-alt4", "rooif ",   "rồi "},
         {"E-prj", "project ", "project "},
         {"E-gun", "guns ",    "guns "},
         {"E-ggl", "google ",  "google "},
@@ -638,6 +717,7 @@ int main() {
     checkCompoundNeverOverridesVietnamese(st);
     checkAlternateKeyOrdersStayVietnamese(st);
     checkCleanCompoundEmitsNothing(st);
+    checkAlternateSpellingsKeepTheirMark(st);
     vAutoDetectEnglish = 0;
 
     // User-supplied articles / cases dropped into core/tests/cases/*.txt

@@ -66,8 +66,12 @@ buswow ok => bướ ok
 chiseem lasy ok => chiếm láy ok
 thuana ok => thuân ok
 chorio ok => chổi ok
+# "sieuse" used to come out "siêu" while "dieuse" one line up came out "diếu" —
+# the same shape, differing only in the initial consonant, because that consonant
+# is the tone letter and got counted as a second press of the tone key. It now
+# keeps its mark like its neighbour.
 dieuse ok => diếu ok
-sieuse ok => siêu ok
+sieuse ok => siếu ok
 duoiso ok => duối ok
 
 # --- a string in neither dictionary is left alone: the drawn-out "quáaaa" must
