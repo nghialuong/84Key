@@ -1645,6 +1645,15 @@ static bool dropDoubledToneAtBreak(const int& handleCode) {
         return false;
     if (isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord))
         return false;
+    //The raw keys are only one of the spellings Telex accepts, and the dictionary
+    //stores one of them: "sướng" is "suwowngs" there, but "suowngs", "suonwgs" and
+    //"suongws" type it just as well. Judging the keys alone declares those three
+    //non-Vietnamese, and since the word's own initial consonant is its tone letter
+    //they then look like a doubled tone key and lose the mark. renderedIsViet()
+    //asks the same question of the word actually built on screen, which has one
+    //spelling and is in the dictionary. Same reasoning as restoreEnglishAtBreak().
+    if (renderedIsViet())
+        return false;
 
     Uint32 markMask = 0;
     for (i = 0; i < _index; i++) {
@@ -1692,6 +1701,9 @@ static bool dropDoubledToneAtKeystroke() {
     if (!engDetectEnabled() || _index < 2 || !buildEngRawFromStates())
         return false;
     if (isEnglishWord(_engRawWord) || isVietByTelex(_engRawWord) || isVietByTelexPrefix(_engRawWord))
+        return false;
+    //Same alternate-spelling hole as the break version above.
+    if (renderedIsViet())
         return false;
 
     Uint32 markMask = 0;
