@@ -86,8 +86,6 @@ NSArray* gUnicodeCompoundApp = @[@"com.apple.",
 
 CGEventSourceRef gEventSource = NULL;
 vKeyHookState* pData = NULL;
-CGEventRef gBackSpaceDown = NULL;
-CGEventRef gBackSpaceUp = NULL;
 
 UniChar gNewChar, gNewCharHi;
 CGEventRef gNewEventDown, gNewEventUp;
@@ -285,15 +283,25 @@ void SendEmptyCharacter() {
     CFRelease(gNewEventUp);
 }
 
+// One backspace, built fresh. A transform sends these in a run, and reposting a
+// single cached event object hands the app the same event several times over —
+// same identity, same creation time — which is the shape it drops as repeat.
+void PostBackspace() {
+    CGEventRef down = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, true);
+    CGEventRef up = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, false);
+    PostSynthetic(down);
+    PostSynthetic(up);
+    CFRelease(down);
+    CFRelease(up);
+}
+
 void SendBackspace() {
-    PostSynthetic(gBackSpaceDown);
-    PostSynthetic(gBackSpaceUp);
+    PostBackspace();
 
     if (IS_DOUBLE_CODE(vCodeTable)) { // VNI or Unicode Compound
         if (gSyncKey.size() > 0 && gSyncKey.back() > 1) {
             if (!(vCodeTable == 3 && containUnicodeCompoundApp(FRONT_APP))) {
-                PostSynthetic(gBackSpaceDown);
-                PostSynthetic(gBackSpaceUp);
+                PostBackspace();
             }
         }
         if (gSyncKey.size() > 0)
@@ -793,8 +801,7 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                 } else if (pData->extCode == 2) { // delete key
                     if (gSyncKey.size() > 0) {
                         if (gSyncKey.back() > 1 && (vCodeTable == 2 || !containUnicodeCompoundApp(FRONT_APP))) {
-                            PostSynthetic(gBackSpaceDown);
-                            PostSynthetic(gBackSpaceUp);
+                            PostBackspace();
                         }
                         gSyncKey.pop_back();
                     }
@@ -897,16 +904,6 @@ void ensureEngineInitialized() {
     if (gEventSource == NULL)
         gEventSource = CGEventSourceCreate(kCGEventSourceStatePrivate);
     pData = (vKeyHookState*)vKeyInit();
-    if (gBackSpaceDown == NULL) {
-        gBackSpaceDown = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, true);
-        // Keep each backspace a distinct event so async web editors (Google Docs)
-        // can't coalesce it away before the replacement insert arrives.
-        CGEventSetFlags(gBackSpaceDown, CGEventGetFlags(gBackSpaceDown) | kCGEventFlagMaskNonCoalesced);
-    }
-    if (gBackSpaceUp == NULL) {
-        gBackSpaceUp = CGEventCreateKeyboardEvent(gEventSource, KEY_DELETE, false);
-        CGEventSetFlags(gBackSpaceUp, CGEventGetFlags(gBackSpaceUp) | kCGEventFlagMaskNonCoalesced);
-    }
 }
 
 } // namespace
