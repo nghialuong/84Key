@@ -609,10 +609,19 @@ bool replaceFocusedTextViaAX(int backspaceCount, NSString* newText) {
 
     NSString* wantBase = asciiFold(newText);
     bool ok = false;
-    int attempts = 0;
-    for (attempts = 0; attempts < 20 && !ok; attempts++) {
-        if (attempts > 0)
+    bool giveUp = false;
+    // This runs inside the event-tap callback, so every microsecond spent here is
+    // a microsecond the next keystroke waits — and a callback that overruns its
+    // budget gets the whole tap disabled by the system. Wait on a wall clock
+    // rather than an attempt count: the AX reads below each have a 50 ms
+    // messaging timeout, so twenty of them could hold the callback for a second.
+    const CFAbsoluteTime deadline = CFAbsoluteTimeGetCurrent() + 0.010; // 10ms
+    for (int attempts = 0; !ok && !giveUp; attempts++) {
+        if (attempts > 0) {
+            if (CFAbsoluteTimeGetCurrent() >= deadline)
+                break;
             usleep(300); // 0.3ms: let the OS finish inserting the pending letters
+        }
 
         CFTypeRef valueRef = NULL, rangeRef = NULL;
         bool readOK = (AXUIElementCopyAttributeValue(focused, kAXValueAttribute, &valueRef) == kAXErrorSuccess &&
@@ -639,7 +648,7 @@ bool replaceFocusedTextViaAX(int backspaceCount, NSString* newText) {
                         }
                         ok = true;
                     } else {
-                        attempts = 20; // write failed; stop and fall back
+                        giveUp = true; // write failed; stop and fall back
                     }
                 }
             }
