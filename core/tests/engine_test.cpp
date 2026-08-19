@@ -429,6 +429,15 @@ int main() {
     expectEq(st, "L3", "nguwowif", "người");   // ươi: mark on ơ
     expectEq(st, "L4", "dduocwj", "được");     // uô/ươ rhyme + stop coda
     expectEq(st, "L5", "yeeuj", "yệu");        // yêu: mark on ê
+    // L6-L10: ươ/iê with a sắc or hỏi tone and a real coda. Every ươ case above
+    // carries huyền and spells ươ as "uwow"; the reported fast-typing bug
+    // ("sướng" coming out "sương") sits on this untested corner, so pin the
+    // engine contract for all three key orders before touching the host layer.
+    expectEq(st, "L6", "suwowngs", "sướng");   // ươ spelled uwow, tone last
+    expectEq(st, "L7", "suowngs", "sướng");    // compact uow spelling
+    expectEq(st, "L8", "suongws", "sướng");    // w after the coda
+    expectEq(st, "L9", "trieenr", "triển");    // iê + hỏi + coda
+    expectEq(st, "L10", "truwowngs", "trướng");
 
     printf("\n== M. Final consonant + tone constraint (docs §3) ==\n");
     resetOptions();
