@@ -28,6 +28,8 @@
 #import <Carbon/Carbon.h>
 #import <ApplicationServices/ApplicationServices.h>
 
+#include <mach/mach_time.h>
+
 #include "Engine.h"
 
 // Engine option globals (defined in EngineGlobals.cpp).
@@ -157,6 +159,25 @@ BOOL isBrowserApp(NSString* topApp) {
     return false;
 }
 
+// The one place a synthetic event leaves this file.
+//
+// Two properties every posted event needs, and which were previously set at
+// some call sites and not others:
+//   * kCGEventFlagMaskNonCoalesced — a transform posts a burst (empty char, N
+//     backspaces, then the replacement) and the window server must not merge
+//     any two of them; a merged delete leaves the old character behind.
+//   * a fresh timestamp — CGEventCreate* stamps the event when it is created,
+//     and events that are reposted (or built once and cached) carry a stale
+//     time. A burst of identically-stamped key events is what a receiving app
+//     reads as key repeat, and repeat is exactly what it is allowed to drop.
+//     This is only visible when the app is busy enough to take several of them
+//     in one run-loop pass, i.e. when typing fast.
+void PostSynthetic(CGEventRef e) {
+    CGEventSetFlags(e, CGEventGetFlags(e) | kCGEventFlagMaskNonCoalesced);
+    CGEventSetTimestamp(e, mach_absolute_time());
+    CGEventTapPostEvent(gProxy, e);
+}
+
 void InsertKeyLength(const Uint8& len) {
     gSyncKey.push_back(len);
 }
@@ -166,8 +187,8 @@ void SendPureCharacter(const Uint16& ch) {
     gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
     CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &ch);
     CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &ch);
-    CGEventTapPostEvent(gProxy, gNewEventDown);
-    CGEventTapPostEvent(gProxy, gNewEventUp);
+    PostSynthetic(gNewEventDown);
+    PostSynthetic(gNewEventUp);
     CFRelease(gNewEventDown);
     CFRelease(gNewEventUp);
     if (IS_DOUBLE_CODE(vCodeTable)) {
@@ -190,20 +211,18 @@ void SendKeyCode(Uint32 data) {
         } else {
             privateFlag &= ~kCGEventFlagMaskShift;
         }
-        privateFlag |= kCGEventFlagMaskNonCoalesced;
-
         CGEventSetFlags(gNewEventDown, privateFlag);
         CGEventSetFlags(gNewEventUp, privateFlag);
-        CGEventTapPostEvent(gProxy, gNewEventDown);
-        CGEventTapPostEvent(gProxy, gNewEventUp);
+        PostSynthetic(gNewEventDown);
+        PostSynthetic(gNewEventUp);
     } else {
         if (vCodeTable == 0) { // unicode 2 bytes code
             gNewEventDown = CGEventCreateKeyboardEvent(gEventSource, 0, true);
             gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
             CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &gNewChar);
             CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &gNewChar);
-            CGEventTapPostEvent(gProxy, gNewEventDown);
-            CGEventTapPostEvent(gProxy, gNewEventUp);
+            PostSynthetic(gNewEventDown);
+            PostSynthetic(gNewEventUp);
         } else if (vCodeTable == 1 || vCodeTable == 2 || vCodeTable == 4) { // VNI Windows, TCVN3, CP1258: 1 byte code
             gNewCharHi = HIBYTE(gNewChar);
             gNewChar = LOBYTE(gNewChar);
@@ -212,8 +231,8 @@ void SendKeyCode(Uint32 data) {
             gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
             CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &gNewChar);
             CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &gNewChar);
-            CGEventTapPostEvent(gProxy, gNewEventDown);
-            CGEventTapPostEvent(gProxy, gNewEventUp);
+            PostSynthetic(gNewEventDown);
+            PostSynthetic(gNewEventUp);
             if (gNewCharHi > 32) {
                 if (vCodeTable == 2) // VNI
                     InsertKeyLength(2);
@@ -223,8 +242,8 @@ void SendKeyCode(Uint32 data) {
                 gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
                 CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &gNewCharHi);
                 CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &gNewCharHi);
-                CGEventTapPostEvent(gProxy, gNewEventDown);
-                CGEventTapPostEvent(gProxy, gNewEventUp);
+                PostSynthetic(gNewEventDown);
+                PostSynthetic(gNewEventUp);
             } else {
                 if (vCodeTable == 2) // VNI
                     InsertKeyLength(1);
@@ -239,8 +258,8 @@ void SendKeyCode(Uint32 data) {
             gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
             CGEventKeyboardSetUnicodeString(gNewEventDown, (gNewCharHi > 0 ? 2 : 1), gUniChar);
             CGEventKeyboardSetUnicodeString(gNewEventUp, (gNewCharHi > 0 ? 2 : 1), gUniChar);
-            CGEventTapPostEvent(gProxy, gNewEventDown);
-            CGEventTapPostEvent(gProxy, gNewEventUp);
+            PostSynthetic(gNewEventDown);
+            PostSynthetic(gNewEventUp);
         }
     }
     CFRelease(gNewEventDown);
@@ -260,21 +279,21 @@ void SendEmptyCharacter() {
     gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
     CGEventKeyboardSetUnicodeString(gNewEventDown, 1, &gNewChar);
     CGEventKeyboardSetUnicodeString(gNewEventUp, 1, &gNewChar);
-    CGEventTapPostEvent(gProxy, gNewEventDown);
-    CGEventTapPostEvent(gProxy, gNewEventUp);
+    PostSynthetic(gNewEventDown);
+    PostSynthetic(gNewEventUp);
     CFRelease(gNewEventDown);
     CFRelease(gNewEventUp);
 }
 
 void SendBackspace() {
-    CGEventTapPostEvent(gProxy, gBackSpaceDown);
-    CGEventTapPostEvent(gProxy, gBackSpaceUp);
+    PostSynthetic(gBackSpaceDown);
+    PostSynthetic(gBackSpaceUp);
 
     if (IS_DOUBLE_CODE(vCodeTable)) { // VNI or Unicode Compound
         if (gSyncKey.size() > 0 && gSyncKey.back() > 1) {
             if (!(vCodeTable == 3 && containUnicodeCompoundApp(FRONT_APP))) {
-                CGEventTapPostEvent(gProxy, gBackSpaceDown);
-                CGEventTapPostEvent(gProxy, gBackSpaceUp);
+                PostSynthetic(gBackSpaceDown);
+                PostSynthetic(gBackSpaceUp);
             }
         }
         if (gSyncKey.size() > 0)
@@ -287,21 +306,17 @@ void SendShiftAndLeftArrow() {
     CGEventRef eventVkeyUp = CGEventCreateKeyboardEvent(gEventSource, KEY_LEFT, false);
     CGEventFlags privateFlag = CGEventGetFlags(eventVkeyDown);
     privateFlag |= kCGEventFlagMaskShift;
-    // Don't let the window server coalesce this selection key with the insert
-    // that immediately follows — async web editors (Google Docs) otherwise apply
-    // the insert before the selection lands, dropping the deletion.
-    privateFlag |= kCGEventFlagMaskNonCoalesced;
     CGEventSetFlags(eventVkeyDown, privateFlag);
     CGEventSetFlags(eventVkeyUp, privateFlag);
 
-    CGEventTapPostEvent(gProxy, eventVkeyDown);
-    CGEventTapPostEvent(gProxy, eventVkeyUp);
+    PostSynthetic(eventVkeyDown);
+    PostSynthetic(eventVkeyUp);
 
     if (IS_DOUBLE_CODE(vCodeTable)) { // VNI or Unicode Compound
         if (gSyncKey.size() > 0 && gSyncKey.back() > 1) {
             if (!(vCodeTable == 3 && containUnicodeCompoundApp(FRONT_APP))) {
-                CGEventTapPostEvent(gProxy, eventVkeyDown);
-                CGEventTapPostEvent(gProxy, eventVkeyUp);
+                PostSynthetic(eventVkeyDown);
+                PostSynthetic(eventVkeyUp);
             }
         }
         if (gSyncKey.size() > 0)
@@ -387,12 +402,8 @@ void SendNewCharString(const bool& dataFromMacro = false, const Uint16& offset =
     gNewEventUp = CGEventCreateKeyboardEvent(gEventSource, 0, false);
     CGEventKeyboardSetUnicodeString(gNewEventDown, gWillContinueSending ? 16 : gNewCharSize - offset, gNewCharString);
     CGEventKeyboardSetUnicodeString(gNewEventUp, gWillContinueSending ? 16 : gNewCharSize - offset, gNewCharString);
-    // Non-coalesced so the preceding backspace/selection isn't merged with this
-    // insert by the window server (async web editors otherwise drop the delete).
-    CGEventSetFlags(gNewEventDown, CGEventGetFlags(gNewEventDown) | kCGEventFlagMaskNonCoalesced);
-    CGEventSetFlags(gNewEventUp, CGEventGetFlags(gNewEventUp) | kCGEventFlagMaskNonCoalesced);
-    CGEventTapPostEvent(gProxy, gNewEventDown);
-    CGEventTapPostEvent(gProxy, gNewEventUp);
+    PostSynthetic(gNewEventDown);
+    PostSynthetic(gNewEventUp);
     CFRelease(gNewEventDown);
     CFRelease(gNewEventUp);
 
@@ -782,8 +793,8 @@ CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                 } else if (pData->extCode == 2) { // delete key
                     if (gSyncKey.size() > 0) {
                         if (gSyncKey.back() > 1 && (vCodeTable == 2 || !containUnicodeCompoundApp(FRONT_APP))) {
-                            CGEventTapPostEvent(gProxy, gBackSpaceDown);
-                            CGEventTapPostEvent(gProxy, gBackSpaceUp);
+                            PostSynthetic(gBackSpaceDown);
+                            PostSynthetic(gBackSpaceUp);
                         }
                         gSyncKey.pop_back();
                     }
