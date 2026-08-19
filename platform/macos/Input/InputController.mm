@@ -667,8 +667,15 @@ static void Key84ToggleLanguage() {
 }
 
 CGEventRef Key84Callback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void* refcon) {
-    // re-enable the tap if the system disabled it (timeout / user input)
+    // The system disabled the tap (we were too slow, or the user forced input
+    // through). Keystrokes reached the app while it was off and the engine never
+    // saw them, so TypingWord / _index now describe a word that is not the one on
+    // screen — and the next word break would act on that: restoreEnglishAtBreak()
+    // and checkRestoreIfWrongSpelling() both delete _index characters and retype
+    // from the engine's own buffer. Start a new word before re-enabling, so the
+    // gap costs the rest of one word rather than mangling it.
     if (type == kCGEventTapDisabledByTimeout || type == kCGEventTapDisabledByUserInput) {
+        RequestNewSession();
         if (gEventTap) {
             CGEventTapEnable(gEventTap, true);
         }
