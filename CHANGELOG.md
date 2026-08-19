@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Tone dropped when you type fast**: typing "sướng" (`suwowngs`) quickly gave
+  "sương", and "triển" (`trieenr`) gave "triên" — the tone key left nothing
+  behind at all, not even a literal `s`/`r`. The engine was right in every case;
+  the burst it asks for (a run of backspaces, then the corrected letters) was
+  being dropped on the way to the app. Backspaces were one cached event object
+  posted again for each delete, and no synthetic event ever carried a timestamp,
+  so a burst arrived as several identical events — the shape an app reads as key
+  repeat and is free to collapse, which it only gets the chance to do when it is
+  busy enough to take them in one pass. Each backspace is now its own event,
+  every synthetic event is stamped and marked non-coalescing on the way out, the
+  Accessibility retry that could stall the tap for up to a second is bounded to
+  10 ms, and a tap the system disables now starts a new word instead of leaving
+  the engine describing text that is no longer on screen.
+
 ## [0.1.7] - 2026-08-04
 
 ### Fixed
