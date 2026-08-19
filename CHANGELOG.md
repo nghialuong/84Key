@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-08-19
+
+### Fixed
+
+- **A finished word losing its tone mark when you press space**: typing "sướng"
+  and pressing space gave "sương "; "triển" gave "triên ". The word was correct the
+  whole time it was being typed — only the break took the mark off. Telex accepts
+  several key orders for the same syllable and the dictionary stores one of them,
+  so a word typed as "suowngs" rather than the stored "suwowngs" was not recognised
+  as Vietnamese; the check that undoes an accidental double-press of a tone key then
+  counted the word's own initial consonant as that second press. Every syllable
+  starting with s, r, x, f or j was exposed. The check now judges the word on screen,
+  which has a single spelling, instead of the keys that produced it.
+
 ## [0.1.8] - 2026-08-19
 
 ### Fixed
