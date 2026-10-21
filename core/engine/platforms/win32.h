@@ -7,6 +7,16 @@
 
 #ifndef OPENKEY_WIN32_H
 #define OPENKEY_WIN32_H
+
+// <windows.h> defines min/max as macros unless NOMINMAX is set, which breaks
+// any std::min/std::max call and every `numeric_limits<T>::max()` idiom in a
+// translation unit that reaches this header. The engine has none today, but
+// DataType.h pulls this header into every Windows TU, so one such call added
+// later would fail to compile for a reason with no obvious connection to the
+// line that broke. Guarded so a host app that already set it is left alone.
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 
 //define Key code for Windows keyboard
