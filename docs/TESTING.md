@@ -1,9 +1,10 @@
 # Testing 84Key
 
-84Key is tested at three levels, from fast/pure to full end-to-end.
+84Key is tested at three levels, from fast/pure to full end-to-end, with the
+Linux host covered by its own suites (section 4).
 
 ```sh
-bash core/tests/run_tests.sh     # runs the two C++ suites below; exit 0 = all pass
+bash core/tests/run_tests.sh     # all the C++ suites below, Linux host included; exit 0 = all pass
 ```
 
 ## 1. Engine harness — `core/tests/engine_test.cpp`
@@ -104,3 +105,64 @@ live-only issues:
 ```sh
 KEY84_TRACE=1 build/dd/Build/Products/Release/84Key.app/Contents/MacOS/84Key
 ```
+
+## 4. Linux
+
+### Host tests — `platform/linux/tests/host_test.cpp`
+
+Pure C++ like the suites above, run by `core/tests/run_tests.sh` (through
+`platform/linux/tests/run_tests.sh`) and by `ctest` in the CMake build. The
+script first rebuilds the engine harness and the typing simulation with
+`-DLINUX`, so the engine's own suites also hold under the Linux key table.
+
+`host_test.cpp` drives `Composer` — the Linux typing pipeline — and models what
+an IBus client does with its output (commit, preedit, keys handed back), then
+holds it to the macOS pipeline:
+
+- **every Telex word in `viet_telex.dat`**, plain and capitalised, English
+  detection off and on (~118,000 sequences), must show the same text on both
+  hosts;
+- **a seeded random fuzz** — 3,000 sequences in each of a dozen modes (Telex,
+  VNI, Simple Telex; detection, spelling, quick Telex, free marking, ...) mixing
+  letters, digits, punctuation, spaces and Backspace — must too. The only runs
+  set aside are those where the engine asks to rewrite more than the word holds
+  (an engine overreach; see `Composer::engineAgrees()`), where the macOS host
+  deletes a character it does not own and so is no reference — they are counted
+  and reported;
+- **the legacy code tables** are checked against `ConvertTool`: typing in TCVN3,
+  VNI Windows, Unicode Compound or CP1258, Backspace included, must give the
+  conversion of what Unicode typing gives;
+- plus the preedit protocol (what is committed when, what reaches the app), the
+  Linux-only behaviour (Enter, shortcuts, clicks, keypad, password fields), the
+  VI/EN hotkey, and the explicit cases of `core/tests/cases/*.txt`
+  (`backspace_restore.txt` gates).
+
+When a differential check fails, look at one script key by key on both hosts, or
+at what the Linux host shows for it:
+
+```sh
+cd platform/linux/tests
+/tmp/key84_linux_host_test --trace "ijfu{BS}w" 0 1    # keys, input type, detection
+/tmp/key84_linux_host_test --type "tieesng vieejt"
+```
+
+### End-to-end — `platform/linux/tests/e2e.py`
+
+Real keystrokes (XTEST, via `xdotool`) into GTK 3 and GTK 4 text fields, through
+the GTK IBus module, a real `ibus-daemon` and the engine binary — which the
+daemon finds through a component file, runs with `--xml` and starts with
+`--ibus`, exactly as when installed. It checks what the host tests cannot: that
+the preedit protocol behaves in a real toolkit (a click mid-word commits the word
+once; Enter, Tab and shortcuts land after the word), 500 keys per second, a
+password field, live settings changes, the VI/EN hotkey, the input-source menu,
+and the trace procedure in [`LINUX.md`](LINUX.md).
+
+```sh
+python3 platform/linux/tests/e2e.py --engine build/linux/ibus-engine-84key
+```
+
+Everything runs privately — its own D-Bus session, X server (Xvfb), IBus daemon
+and config directory — so it never types into your desktop or touches your
+settings. Needs `xvfb`, `xdotool`, `ibus`, `ibus-gtk3`, `ibus-gtk4` and
+`python3-gi` with the GTK typelibs. CI runs it on every push; `--keep` keeps the
+logs, and `KEY84_TRACE=1` in the environment traces the engine into them.

@@ -8,17 +8,18 @@
 ## What it is
 
 84Key is a free, open-source **Vietnamese input method (bộ gõ tiếng Việt) for
-macOS**. It lets you type Vietnamese with diacritics using standard input
+macOS and Linux**. It lets you type Vietnamese with diacritics using standard input
 conventions (Telex, VNI, Simple Telex) in any application. The name comes from
 Vietnam's `+84` international calling code.
 
 It reuses the proven [OpenKey](https://github.com/tuyenvm/OpenKey) C++ typing
-engine (GPLv3) and wraps it in a modern SwiftUI **menu-bar app**, adding two
+engine (GPLv3) and wraps it in a modern SwiftUI **menu-bar app** on macOS and an
+**IBus input method** on Linux, adding two
 flagship improvements on top: **automatic English-word detection** and a
 **Spotlight diacritic-placement fix**.
 
-- **Platform:** macOS only today. Windows and Linux are planned; the typing
-  engine is already platform-independent C++ to make that possible.
+- **Platform:** macOS and Linux (IBus; packaged for Ubuntu 24.04+ / Debian 13).
+  Windows is planned; the typing engine is platform-independent C++.
 - **License:** GPLv3 (inherited from OpenKey).
 - **Bundle id:** `com.nghialuong.key84`.
 - **Privacy:** 100% local. No telemetry, no network calls for typing, no
@@ -32,6 +33,11 @@ do; the engine maintains the current word and decides whether to leave the key
 alone or to rewrite the word (e.g. send synthetic backspaces, then the
 re-composed characters with the correct diacritics). It deliberately avoids
 acting in secure-input / password fields.
+
+On Linux 84Key is an IBus engine instead: the same C++ engine decides, but the
+word being typed is shown as composing (preedit) text and committed whole at the
+word break, so the application's text is never rewritten. See
+[`LINUX.md`](LINUX.md).
 
 ## Flagship features
 
