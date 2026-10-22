@@ -38,6 +38,9 @@ Package.resolved
 # --- Local-only test fixtures (e.g. pasted articles that may be copyrighted) ---
 core/tests/cases/test_1.txt
 
+# --- Python (Linux settings window, test scripts) ---
+__pycache__/
+
 # --- Misc ---
 *.log
 .env
