@@ -16,6 +16,36 @@ jobs:
       - name: Build and run the engine + English-detection harness
         run: bash core/tests/run_tests.sh
 
+  linux-engine:
+    name: Linux IBus engine
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build and test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build pkg-config dpkg-dev libibus-1.0-dev \
+            ibus ibus-gtk3 ibus-gtk4 python3-gi gir1.2-gtk-3.0 gir1.2-gtk-4.0 gir1.2-adw-1 \
+            gir1.2-ibus-1.0 xvfb xdotool dbus
+      - name: Build
+        run: |
+          cmake -S platform/linux -B build/linux -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build/linux
+      - name: Host tests (typing pipeline vs the macOS one, hotkey)
+        run: ctest --test-dir build/linux --output-on-failure
+      # Real keystrokes through Xvfb, ibus-daemon and GTK 3/4 text fields, all
+      # private to the job.
+      - name: End-to-end
+        run: python3 platform/linux/tests/e2e.py --engine build/linux/ibus-engine-84key
+      - name: Package (.deb)
+        run: cd build/linux && cpack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ibus-84key-deb
+          path: build/linux/*.deb
+
   macos-app:
     name: Build macOS app
     runs-on: macos-latest
