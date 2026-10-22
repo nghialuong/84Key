@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Linux support**: 84Key now runs on Linux as an IBus input method — Ubuntu,
+  Debian, Fedora and other IBus desktops, under X11 and Wayland — with the same
+  engine, dictionaries and English detection as on macOS. The word being typed
+  is shown as composing text and committed in one piece at the word break, so
+  the application's text is never rewritten with backspaces: no doubled letters,
+  no lost tone marks, nothing pasted through the clipboard. Telex, VNI and
+  Simple Telex, every code table, the VI/EN switch (Ctrl + Shift, shown as VI/EN
+  in the top bar, remembered per application), password fields left alone, an
+  input-source menu and a settings window. Ships as a `.deb`
+  (`ibus-84key`); see `docs/LINUX.md`.
+
 ## [0.1.9] - 2026-08-19
 
 ### Fixed

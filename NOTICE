@@ -24,6 +24,10 @@ Third-party software
    License: MIT (with a BSD-licensed bundled bsdiff).
    Provides 84Key's in-app auto-update (appcast + signed update install).
 
+On Linux, 84Key uses the system's IBus, GLib, GTK, libadwaita and PyGObject
+libraries (LGPL-2.1-or-later). They are linked or loaded at run time and are
+not bundled.
+
 
 Third-party data
 ----------------

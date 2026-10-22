@@ -20,3 +20,9 @@ c++ -std=c++14 -O2 -o "$SIM" typing_sim_test.cpp $ENGINE_SRC
 # Invariants of the macOS send layer (source-level — nothing here can call
 # CGEvent, and the properties they guard only fail under load in a real app).
 bash ../../platform/macos/tests/send_invariants_test.sh
+
+# The Linux host's typing pipeline, held to the macOS one keystroke for
+# keystroke, plus the engine suites above rebuilt with the Linux key table.
+# Pure C++ like this harness (the IBus engine itself is tested by
+# platform/linux/tests/e2e.py).
+bash ../../platform/linux/tests/run_tests.sh

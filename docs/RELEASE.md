@@ -81,7 +81,9 @@ git push origin v0.1.0
 
 Watch **Actions → Release**. On success a GitHub Release is created with
 `84Key-v0.1.0.dmg` attached. The tag version (minus the `v`) is baked into the app's
-`MARKETING_VERSION`.
+`MARKETING_VERSION`. A second job, **Build Linux .deb**, then builds the Linux
+package on Ubuntu 24.04 with the same version and attaches
+`ibus-84key_0.1.0_amd64.deb` to the release; it needs none of the secrets below.
 
 > **Bump the build number first.** Sparkle decides "is this newer?" by comparing
 > `CFBundleVersion` (`CURRENT_PROJECT_VERSION` in `platform/macos/project.yml`), not

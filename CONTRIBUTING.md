@@ -1,8 +1,8 @@
 # Contributing to 84Key
 
 Thanks for your interest in improving 84Key, a free and open-source Vietnamese
-input method for macOS. Contributions of all kinds are welcome: bug reports,
-fixes, features, documentation, and translations.
+input method for macOS and Linux. Contributions of all kinds are welcome: bug
+reports, fixes, features, documentation, and translations.
 
 ## License of contributions
 
@@ -15,15 +15,18 @@ license.
 
 ## Repository layout
 
-84Key is split into two main parts:
+84Key is split into a shared engine and one front end per platform:
 
 - **`core/`** — the C++ typing engine, shared across platforms. This is GPLv3
   and is largely derived from OpenKey. Changes here affect every platform.
 - **`platform/macos/`** — the SwiftUI menu-bar application (the macOS front
   end).
+- **`platform/linux/`** — the IBus engine and its settings window (the Linux
+  front end).
 
-Keep platform-agnostic typing logic in `core/`, and keep macOS-specific code
-(menu bar, settings UI, Accessibility integration) in `platform/macos/`.
+Keep platform-agnostic typing logic in `core/`, and keep platform-specific code
+(menu bar, settings UI, Accessibility integration; IBus) in its `platform/`
+directory.
 
 ## Before you submit
 
@@ -42,13 +45,18 @@ Keep platform-agnostic typing logic in `core/`, and keep macOS-specific code
 2. **Build the macOS app** if your change touches `platform/macos/`, to make
    sure it still compiles (Xcode / `xcodebuild`).
 
+3. **Build the Linux engine and run its end-to-end test** if your change touches
+   `platform/linux/` (see [`docs/BUILD.md`](docs/BUILD.md#linux) and
+   [`docs/TESTING.md`](docs/TESTING.md#4-linux)). The Linux host tests already
+   run as part of `core/tests/run_tests.sh`.
+
 ## Commit style
 
 We use [Conventional Commits](https://www.conventionalcommits.org/). Use one
 logical change per commit and a clear type prefix, optionally with a scope:
 
 - `feat:` / `feat(core):` — a new feature
-- `fix:` / `fix(macos):` — a bug fix
+- `fix:` / `fix(macos):` / `fix(linux):` — a bug fix
 - `docs:` — documentation only
 - `test:` — adding or fixing tests
 - `refactor:` — code change that neither fixes a bug nor adds a feature
@@ -76,8 +84,8 @@ upstream).
   comments; internal docs (`docs/*.md`, this file, `SECURITY.md`,
   `CODE_OF_CONDUCT.md`, GitHub issue/PR templates); commit messages; and
   developer-facing logs (`NSLog`, debug output — these are diagnostics, not UI).
-- **Use Vietnamese for**: every user-facing UI string in the apps (macOS now;
-  Windows/Linux later) — `Text`, `Toggle`, `Picker`, `Section`, `Button`,
+- **Use Vietnamese for**: every user-facing UI string in the apps (macOS and
+  Linux now; Windows later) — `Text`, `Toggle`, `Picker`, `Section`, `Button`,
   `Label`, `LabeledContent` labels, window titles, menu-bar items, onboarding
   copy — and `README.md` (keep it bilingual, **Vietnamese first**).
 - **Keep as-is (do not translate)**: the brand name **84Key**; technical names
@@ -88,7 +96,8 @@ upstream).
 
 Open an issue on GitHub. For bug reports, please include:
 
-- macOS version and Mac model.
+- macOS version and Mac model — or, on Linux, the distribution, desktop
+  (GNOME, KDE, ...), X11 or Wayland, and the application.
 - The input method (Telex / VNI / Simple Telex) and code table in use.
 - Exact keystrokes typed and the expected vs. actual output.
 - Whether any other Vietnamese IME (OpenKey, EVKey, etc.) was running.

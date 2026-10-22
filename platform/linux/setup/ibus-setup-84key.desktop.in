@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=84Key
+GenericName=Vietnamese input method settings
+GenericName[vi]=Cài đặt bộ gõ tiếng Việt
+Comment=Settings for the 84Key Vietnamese input method
+Comment[vi]=Cài đặt bộ gõ tiếng Việt 84Key
+Exec=@CMAKE_INSTALL_FULL_LIBEXECDIR@/ibus-setup-84key
+Icon=@KEY84_PKGDATADIR@/icons/84key.png
+Terminal=false
+Categories=Settings;
+Keywords=Vietnamese;Telex;VNI;IBus;input;tiếng Việt;bộ gõ;
+StartupNotify=true

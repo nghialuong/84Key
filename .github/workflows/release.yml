@@ -155,3 +155,30 @@ jobs:
         run: |
           security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
           rm -f "$RUNNER_TEMP/asc.p8" "$RUNNER_TEMP/devid.p12"
+
+  linux-deb:
+    name: Build Linux .deb
+    runs-on: ubuntu-24.04
+    # After the macOS job has created the release, so the two never race to
+    # create it; this one only adds the package to it.
+    needs: release
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build pkg-config dpkg-dev libibus-1.0-dev
+      - name: Build and package
+        run: |
+          set -euo pipefail
+          cmake -S platform/linux -B build/linux -G Ninja -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_INSTALL_PREFIX=/usr -DKEY84_VERSION="${GITHUB_REF_NAME#v}"
+          cmake --build build/linux
+          ctest --test-dir build/linux --output-on-failure
+          (cd build/linux && cpack)
+      - name: Attach to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/linux/*.deb

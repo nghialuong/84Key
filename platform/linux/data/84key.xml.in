@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- IBus component for 84Key. The engine prints its own description (the
+     engines element below runs it with the xml option), so its name, language,
+     icon and settings program live in one place: platform/linux/src/main.cpp. -->
+<component>
+  <name>org.freedesktop.IBus.Key84</name>
+  <description>84Key Vietnamese input method</description>
+  <exec>@CMAKE_INSTALL_FULL_LIBEXECDIR@/ibus-engine-84key --ibus</exec>
+  <version>@KEY84_VERSION@</version>
+  <author>84Key contributors</author>
+  <license>GPL-3.0-or-later</license>
+  <homepage>https://github.com/nghialuong/84Key</homepage>
+  <textdomain>84key</textdomain>
+  <engines exec="@CMAKE_INSTALL_FULL_LIBEXECDIR@/ibus-engine-84key --xml" />
+</component>
